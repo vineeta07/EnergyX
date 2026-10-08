@@ -1,0 +1,63 @@
+{
+  "algorithm": "LightGBM regressor (yield kWh/kg)",
+  "dataset_size": 531,
+  "metrics": {
+    "mae": 14.28598266059968,
+    "rmse": 23.88015844452343,
+    "r2": 0.9906222032047033,
+    "mape": 0.0712706242699766,
+    "n": 107,
+    "yield_mae_kwh_per_kg": 0.03753048783914698,
+    "baseline_mape_hist_yield": 0.0879153942957542
+  },
+  "params": {
+    "n_estimators": 95,
+    "max_depth": 5,
+    "learning_rate": 0.04,
+    "subsample": 0.9,
+    "colsample_bytree": 0.9,
+    "reg_lambda": 1.0,
+    "random_state": 3
+  },
+  "feature_importance": {
+    "Facility historical yield": 0.6239639651565907,
+    "Facility efficiency": 0.009703548137615392,
+    "Waste compatibility": 0.04576263553135025,
+    "Waste stream": 0.2825591034799431,
+    "Technology": 0.006391215420123732,
+    "Moisture": 0.026341643024202714,
+    "Capacity / load": 0.001797749555678896,
+    "Batch size": 0.002066587811752556,
+    "Seasonality": 0.0014135518827426716
+  },
+  "sigma": {
+    "plastic": 0.0800238075552154,
+    "organic": 0.07752141943052018,
+    "paper": 0.4778494385803848,
+    "_default": 0.2992185963764358
+  },
+  "log": {
+    "validation": {
+      "rows_in": 533,
+      "missing_columns": [],
+      "dropped": {},
+      "rows_out": 533
+    },
+    "cleaning": {
+      "moisture_imputed": 0,
+      "yield_outliers_excluded": 2
+    },
+    "split": {
+      "train": 371,
+      "validation": 53,
+      "test": 107,
+      "strategy": "time-ordered 70/10/20",
+      "live_feedback_rows": 0
+    },
+    "snapshot": "37e50c7f5bce",
+    "duration_s": 1.01
+  },
+  "version": "v1.202610081935",
+  "model_key": "energy",
+  "saved_at": "2026-10-08T19:35:45.025167+00:00"
+}

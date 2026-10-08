@@ -1,0 +1,50 @@
+{
+  "algorithm": "Random-forest multi-output composition model (tabular; vision model not deployed)",
+  "dataset_size": 220,
+  "metrics": {
+    "mae": 0.011325461142141339,
+    "mae_per_stream": {
+      "organic": 0.023217255844486414,
+      "plastic": 0.014717800227743579,
+      "paper": 0.00923033124200724,
+      "metal": 0.004031060136425551,
+      "other": 0.005430858260043898
+    },
+    "moisture_mae_pp": 3.860262788923045,
+    "accuracy": 1.0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0,
+    "organic_r2": 0.9447398177591364,
+    "n": 44,
+    "label_definition": "dominant stream (argmax of composition)"
+  },
+  "params": {
+    "n_estimators": 300,
+    "min_samples_leaf": 3,
+    "max_features": 0.8,
+    "random_state": 11,
+    "n_jobs": -1
+  },
+  "log": {
+    "validation": {
+      "rows_in": 220,
+      "missing_columns": [],
+      "dropped": {
+        "composition_sum": 0
+      },
+      "rows_out": 220
+    },
+    "split": {
+      "train": 176,
+      "test": 44,
+      "strategy": "time-based 80/20",
+      "operator_labels": 0
+    },
+    "snapshot": "fc965bdeb041",
+    "duration_s": 3.36
+  },
+  "version": "v1.202610081927",
+  "model_key": "classifier",
+  "saved_at": "2026-10-08T19:27:13.808767+00:00"
+}

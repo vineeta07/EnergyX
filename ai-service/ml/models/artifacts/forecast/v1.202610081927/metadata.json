@@ -1,0 +1,73 @@
+{
+  "algorithm": "LightGBM regressor (recursive multi-step)",
+  "dataset_size": 2119,
+  "metrics": {
+    "mae": 69.87655172151959,
+    "rmse": 111.21573736569411,
+    "r2": 0.9681924250212381,
+    "mape": 0.07696678688132717,
+    "n": 280,
+    "baseline_mape_seasonal_naive": 0.1196951473645232
+  },
+  "params": {
+    "n_estimators": 76,
+    "learning_rate": 0.04,
+    "num_leaves": 31,
+    "min_child_samples": 20,
+    "subsample": 0.9,
+    "subsample_freq": 1,
+    "colsample_bytree": 0.9,
+    "reg_lambda": 1.0,
+    "random_state": 7,
+    "verbose": -1
+  },
+  "feature_importance": {
+    "lag1": 0.05526172592594802,
+    "lag2": 0.03745253874411712,
+    "lag7": 0.3557477449808048,
+    "roll7": 0.03613459610184124,
+    "roll14": 0.03367792305216668,
+    "dow": 0.1166939129720917,
+    "is_weekend": 0.020618138706868256,
+    "month_sin": 0.021061965199752293,
+    "month_cos": 0.0019119452190371978,
+    "dom": 0.19477528709334466,
+    "btype": 0.12666422200402802
+  },
+  "log": {
+    "validation": {
+      "rows_in": 2341,
+      "missing_columns": [],
+      "dropped": {},
+      "rows_out": 2341
+    },
+    "cleaning": {
+      "imputed_days": 58,
+      "outliers_replaced": 31
+    },
+    "features": [
+      "lag1",
+      "lag2",
+      "lag7",
+      "roll7",
+      "roll14",
+      "dow",
+      "is_weekend",
+      "month_sin",
+      "month_cos",
+      "dom",
+      "btype"
+    ],
+    "split": {
+      "train": 1559,
+      "validation": 280,
+      "test": 280,
+      "strategy": "time-based (last 14d test, prior 14d validation)"
+    },
+    "snapshot": "8ee23d98779d",
+    "duration_s": 6.21
+  },
+  "version": "v1.202610081927",
+  "model_key": "forecast",
+  "saved_at": "2026-10-08T19:27:10.249947+00:00"
+}
