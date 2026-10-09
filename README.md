@@ -8,6 +8,8 @@ WASTE NETWORK → COLLECTION OPTIMIZATION → PROCESSING HUB → AI CHARACTERIZA
 → FACILITY OPTIMIZATION → ROUTE → ENERGY CONVERSION → ACTUAL OUTPUT → FEEDBACK → MODEL IMPROVEMENT
 ```
 
+> **New here?** Read the **[detailed user & system guide](docs/USER_GUIDE.md)**. It walks through every role's flow screen by screen, what each button calls, and what every function does.
+
 The platform does not send waste to the nearest facility. It sends it where it maximizes **useful energy**, net of transport cost, carbon, and capacity.
 
 ## Architecture
