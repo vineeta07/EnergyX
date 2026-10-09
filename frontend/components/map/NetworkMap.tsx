@@ -115,7 +115,7 @@ export function NetworkMap({ height = 420, extra, className, layers = { sources:
 
   return (
     <div className={cx("relative overflow-hidden rounded-md border border-line", className)} style={{ height }}>
-      <div ref={el} className="absolute inset-0" />
+      <div ref={el} style={{ position: "absolute", inset: 0 }} />
       <div className="pointer-events-none absolute bottom-2 left-2 flex flex-wrap gap-2 rounded bg-canvas/80 px-2 py-1 text-[10px] text-ink-2 backdrop-blur">
         {LEGEND.map((l) => <span key={l.l} className="flex items-center gap-1"><span className="size-2 rounded-full" style={{ background: l.c }} />{l.l}</span>)}
         <span className="flex items-center gap-1"><span className="h-px w-3 border-t border-dashed border-ink-2" />Route</span>

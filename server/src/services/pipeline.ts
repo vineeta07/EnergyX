@@ -22,6 +22,13 @@ import { DEFAULT_WEIGHTS } from "../database/seed.ts";
 const STREAM_LABEL: Record<string, string> = { organic: "Organic", plastic: "Plastic", paper: "Paper", metal: "Metal", other: "Other / residual" };
 const ENERGY_STREAMS: Stream[] = ["organic", "plastic"];
 
+/** Per-stream moisture after hub sorting: wet organics concentrate moisture; dry fractions
+ *  carry only surface moisture (~quarter of the load average, 5–30%). */
+function streamMoisture(stream: string, loadMoisture: number | null | undefined) {
+  if (stream === "organic") return Math.min(92, (loadMoisture ?? 72) + 6);
+  return Math.min(30, Math.max(5, (loadMoisture ?? 40) * 0.25));
+}
+
 // ---------------------------------------------------------------- 1. DISCOVER / REQUEST
 export async function createPickup(input: { source_id: number; quantity_kg: number; urgency?: string; window_start?: string; window_end?: string; notes?: string }, user?: AuthUser) {
   const src = await one<any>("SELECT * FROM waste_sources WHERE id=$1", [input.source_id]);
@@ -313,7 +320,7 @@ export async function optimizeDestination(shipmentId: number) {
     }
     const cands = await facilityCandidates(sh, stream);
     if (!cands.length) continue;
-    const moisture = stream === "organic" ? Math.min(92, (sh.moisture_pct ?? 70) + 6) : Math.max(5, (sh.moisture_pct ?? 30) - 45);
+    const moisture = streamMoisture(stream, sh.moisture_pct);
     const res = await ai.rankFacilities({
       stream, kg: skg, moisture_pct: moisture, month: new Date().getMonth() + 1,
       origin: { lat: sh.lat, lng: sh.lng, name: sh.hub_name }, facilities: cands, weights,
@@ -405,7 +412,7 @@ export async function recordOutput(input: { prediction_id?: number; facility_id?
   const kg = pred?.quantity_kg ?? input.input_kg;
   if (!stream || !kg) throw new HttpError(400, "stream and input_kg required when no prediction_id is given");
   const sh = pred?.shipment_id || input.shipment_id ? await one<any>("SELECT * FROM shipments WHERE id=$1", [pred?.shipment_id ?? input.shipment_id]) : null;
-  const moisture = stream === "organic" ? Math.min(92, (sh?.moisture_pct ?? 72) + 6) : Math.max(5, (sh?.moisture_pct ?? 30) - 45);
+  const moisture = streamMoisture(stream, sh?.moisture_pct);
 
   let actual = input.actual_kwh;
   let source = "manual";

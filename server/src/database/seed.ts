@@ -227,7 +227,7 @@ export async function seed(reset = false) {
       if (stream === "paper" && r() < 0.6) continue; // most paper went to recycling (no energy reading)
       const fac = cands[Math.floor(r() * cands.length)];
       const util = (fac.utilization_pct + gaussian(r) * 8) / 100;
-      const streamMoisture = stream === "organic" ? Math.min(0.92, moisture + 0.06) : Math.max(0.05, moisture - 0.45);
+      const streamMoisture = stream === "organic" ? Math.min(0.92, moisture + 0.06) : Math.min(0.3, Math.max(0.05, moisture * 0.25));
       const kwh = simulateEnergy({ stream, technology: fac.technology, kg, moisture: streamMoisture, sim: fac.sim_params, utilization: util, r });
       const potential = kg * ({ organic: 0.5, plastic: 1.9, paper: 0.9 } as any)[stream];
       await insert("energy_outputs", {

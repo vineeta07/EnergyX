@@ -125,7 +125,7 @@ function HeroDecision() {
   ];
   return (
     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="glass relative self-center rounded-md border border-line-2 p-5 shadow-2xl">
-      <div className="flex items-center justify-between text-[11px] text-ink-3"><span className="num">AI-7001 · facility_selection</span><span className="text-accent">● live model</span></div>
+      <div className="flex items-center justify-between text-[11px] text-ink-3"><span className="num">facility_selection</span><span>illustrative · from a demo run</span></div>
       <div className="mt-3 text-sm text-ink">620 kg organic · Okhla Hub → ?</div>
       <div className="mt-4 space-y-2.5">
         {rows.map((r, i) => (

@@ -171,7 +171,9 @@ def _rules(messages: list[dict]) -> dict:
         ans = f"**{_fmt(tot)} kWh** generated from {stream or 'all'} waste in the last {days} days ({_fmt(kg)} kg input, {tot / kg if kg else 0:.2f} kWh/kg). Simulated meter data.\n\n{lines}"
     elif "prioriti" in q or ("which" in q and "source" in q) or "pickup" in q and "today" in q:
         p = t("get_source_priority")
-        lines = "\n".join(f"{i + 1}. **{s['name']}** — est. {s['est_fill_pct']}% full, {s['avg_daily_kg']:.0f} kg/day, {s['km_to_hub']} km to hub" + (f", open request ({s['open_request']})" if s["open_request"] else "") for i, s in enumerate(p[:5]))
+        def fill(s):
+            return "storage full" if s["est_fill_pct"] >= 100 else f"est. {s['est_fill_pct']}% full"
+        lines = "\n".join(f"{i + 1}. **{s['name']}** — {fill(s)} ({s.get('days_since_collection', '?')} d since last collection), {s['avg_daily_kg']:.0f} kg/day, {s['km_to_hub']} km to hub" + (f", open request ({s['open_request']})" if s["open_request"] else "") for i, s in enumerate(p[:5]))
         ans = f"Prioritise these sources today (storage fill × urgency × energy value ÷ distance):\n\n{lines}"
     elif "route" in q and ("ineffici" in q or "why" in q or "bad" in q or "worst" in q):
         rs = [r for r in t("get_routes") if r["kind"] == "collection"]

@@ -8,9 +8,9 @@ export function Panel({ title, subtitle, actions, children, className, bodyClass
   title?: ReactNode; subtitle?: ReactNode; actions?: ReactNode; children: ReactNode; className?: string; bodyClass?: string; id?: string;
 }) {
   return (
-    <section id={id} className={cx("rounded-md border border-line bg-panel", className)}>
+    <section id={id} className={cx("min-w-0 rounded-md border border-line bg-panel", className)}>
       {(title || actions) && (
-        <header className="flex items-start justify-between gap-3 border-b border-line px-4 py-3">
+        <header className="flex flex-wrap items-start justify-between gap-3 border-b border-line px-4 py-3">
           <div className="min-w-0">
             {title && <h2 className="text-[13px] font-semibold tracking-wide text-ink">{title}</h2>}
             {subtitle && <p className="mt-0.5 text-xs text-ink-3">{subtitle}</p>}
@@ -18,7 +18,7 @@ export function Panel({ title, subtitle, actions, children, className, bodyClass
           {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
         </header>
       )}
-      <div className={cx("p-4", bodyClass)}>{children}</div>
+      <div className={cx("overflow-x-auto p-4", bodyClass)}>{children}</div>
     </section>
   );
 }

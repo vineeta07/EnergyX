@@ -85,7 +85,10 @@ internalRouter.get("/tools/facilities", ah(async (_req, res) => {
 /** Which sources to prioritise: estimated storage fill since last delivered pickup × energy value × urgency. */
 internalRouter.get("/tools/source-priority", ah(async (_req, res) => {
   const rows = await query<any>(`SELECT s.id, s.name, s.business_type, s.avg_daily_kg, s.storage_capacity_kg, s.lat, s.lng,
-      (SELECT MAX(updated_at) FROM pickup_requests p WHERE p.source_id=s.id AND p.status='DELIVERED') AS last_pickup,
+      GREATEST(
+        (SELECT MAX(updated_at) FROM pickup_requests p WHERE p.source_id=s.id AND p.status='DELIVERED'),
+        (SELECT MAX(sh.arrived_at) FROM shipments sh WHERE sh.source_mix @> jsonb_build_array(jsonb_build_object('source_id', s.id)))
+      ) AS last_pickup,
       (SELECT string_agg(p.urgency || ':' || p.status, ',') FROM pickup_requests p WHERE p.source_id=s.id AND p.status IN ('REQUESTED','ASSIGNED')) AS open
     FROM waste_sources s WHERE s.status='active'`);
   const hubs = await query<any>("SELECT * FROM processing_hubs");
@@ -97,7 +100,7 @@ internalRouter.get("/tools/source-priority", ah(async (_req, res) => {
     const hubKm = Math.min(...hubs.map((h) => roadKm(s, h)));
     const organic = ["restaurant", "hotel", "market", "food_processing", "agriculture"].includes(s.business_type);
     const score = fill * urgency * (organic ? 1.25 : 1) * Math.log10(10 + s.avg_daily_kg) / (1 + hubKm / 40);
-    return { name: s.name, business_type: s.business_type, est_fill_pct: round(fill * 100, 0), open_request: s.open ?? null, km_to_hub: round(hubKm, 1), avg_daily_kg: s.avg_daily_kg, priority_score: round(score, 3) };
+    return { name: s.name, business_type: s.business_type, est_fill_pct: round(Math.min(fill, 1) * 100, 0), days_since_collection: round(days, 1), open_request: s.open ?? null, km_to_hub: round(hubKm, 1), avg_daily_kg: s.avg_daily_kg, priority_score: round(score, 3) };
   });
   res.json(scored.sort((a, b) => b.priority_score - a.priority_score).slice(0, 8));
 }));

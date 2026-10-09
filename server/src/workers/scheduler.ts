@@ -73,7 +73,8 @@ async function capacitySweep() {
 
 /** Discover: auto-request pickups for sources whose storage is estimated ≥ 85% full. */
 async function fillLevelDiscovery() {
-  const rows = await query<any>(`SELECT s.*, (SELECT MAX(updated_at) FROM pickup_requests p WHERE p.source_id=s.id AND p.status='DELIVERED') AS last
+  const rows = await query<any>(`SELECT s.*, GREATEST((SELECT MAX(updated_at) FROM pickup_requests p WHERE p.source_id=s.id AND p.status='DELIVERED'),
+      (SELECT MAX(sh.arrived_at) FROM shipments sh WHERE sh.source_mix @> jsonb_build_array(jsonb_build_object('source_id', s.id)))) AS last
     FROM waste_sources s WHERE s.status='active' AND NOT EXISTS (SELECT 1 FROM pickup_requests p WHERE p.source_id=s.id AND p.status IN ('REQUESTED','ASSIGNED','EN_ROUTE'))`);
   for (const s of rows) {
     const days = s.last ? (Date.now() - new Date(s.last).getTime()) / 86_400_000 : 1;

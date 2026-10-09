@@ -19,7 +19,7 @@ export default function Routes() {
   const hubs = useQuery({ queryKey: ["hubs"], queryFn: () => api.get<any[]>("/hubs") });
   const open = useQuery({ queryKey: ["pickups", "REQUESTED"], queryFn: () => api.get<any[]>("/pickups?status=REQUESTED") });
   const live = (routes.data ?? []).filter((r) => r.status !== "cancelled");
-  const route = useMemo(() => live.find((r) => r.id === sel) ?? live.find((r) => r.status !== "completed") ?? live[0], [live, sel]);
+  const route = useMemo(() => live.find((r) => r.id === sel) ?? live.find((r) => r.kind === "collection" && r.status !== "completed") ?? live.find((r) => r.kind === "collection") ?? live[0], [live, sel]);
   useEffect(() => { if (route && sel == null) setSel(route.id); }, [route, sel]);
 
   const optimize = useMutation({ mutationFn: () => api.post<any>("/routes/optimize", hub ? { hub_id: Number(hub) } : {}), onSuccess: (r) => { qc.invalidateQueries(); if (r.routes?.[0]) setSel(r.routes[0].id); } });
@@ -28,7 +28,7 @@ export default function Routes() {
   const fleet = role === "fleet" || role === "admin";
   const err = optimize.error ?? recalc.error ?? start.error;
   const veh = route ? positions[route.vehicle_id] : null;
-  const progress = veh?.route_id === route?.id ? veh!.progress : route?.progress ?? 0;
+  const progress = veh && route && veh.route_id === route.id ? veh.progress : route?.progress ?? 0;
   const load = route ? Math.max(0, ...route.stops.map((s: any) => s.load_kg ?? 0)) : 0;
   const fuel = route?.fuel_l;
 

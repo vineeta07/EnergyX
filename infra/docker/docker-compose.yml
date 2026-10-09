@@ -1,0 +1,49 @@
+# Full stack with real PostgreSQL + PostGIS and Redis (mirrors the AWS topology).
+#   docker compose -f infra/docker/docker-compose.yml up --build
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: wattcycle
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-wattcycle-local}
+      POSTGRES_DB: wattcycle
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wattcycle"]
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+
+  api:
+    build: { context: ../.., dockerfile: infra/docker/server.Dockerfile }
+    environment:
+      DATABASE_URL: postgres://wattcycle:${POSTGRES_PASSWORD:-wattcycle-local}@db:5432/wattcycle
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET}
+      SERVICE_KEY: ${SERVICE_KEY:?set SERVICE_KEY}
+      AI_SERVICE_URL: http://ai:8000
+      CORS_ORIGIN: http://localhost:3000
+      REDIS_URL: redis://redis:6379
+    depends_on: { db: { condition: service_healthy }, redis: { condition: service_started } }
+    ports: ["4000:4000"]
+
+  ai:
+    build: { context: ../.., dockerfile: infra/docker/ai.Dockerfile }
+    environment:
+      BACKEND_URL: http://api:4000
+      SERVICE_KEY: ${SERVICE_KEY:?set SERVICE_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    volumes: [models:/app/ml/models/artifacts]
+
+  web:
+    build: { context: ../.., dockerfile: infra/docker/web.Dockerfile }
+    environment:
+      API_URL: http://api:4000
+      NEXT_PUBLIC_WS_URL: ws://localhost:4000/ws
+    depends_on: [api]
+    ports: ["3000:3000"]
+
+volumes:
+  pgdata:
+  models:
