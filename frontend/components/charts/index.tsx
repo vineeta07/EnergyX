@@ -4,7 +4,8 @@ import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, BarChart, Bar, Sankey, Layer, Rectangle,
   AreaChart, Area, ScatterChart, Scatter, ReferenceLine, ComposedChart, Cell, ZAxis,
 } from "recharts";
-import { n, STREAM_COLOR, STREAM_LABEL } from "@/lib/format";
+import { n, shortDate, STREAM_COLOR, STREAM_LABEL } from "@/lib/format";
+import { t } from "@/lib/i18n";
 
 const AXIS = { stroke: "var(--ink-3)", fontSize: 11, tickLine: false, axisLine: false } as const;
 const GRID = <CartesianGrid stroke="var(--line)" strokeDasharray="0" vertical={false} />;
@@ -12,7 +13,7 @@ const GRID = <CartesianGrid stroke="var(--line)" strokeDasharray="0" vertical={f
 export function ChartTooltip({ active, payload, label, unit = "", labelFmt }: any) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded border border-line-2 bg-raised px-3 py-2 text-xs shadow-xl">
+    <div className="rounded-md border border-line-2 bg-panel px-3 py-2 text-xs shadow-[var(--popover-shadow)]">
       <div className="mb-1 text-ink-3">{labelFmt ? labelFmt(label) : label}</div>
       {payload.filter((p: any) => p.value != null).map((p: any) => (
         <div key={p.dataKey} className="flex items-center gap-2">
@@ -24,8 +25,6 @@ export function ChartTooltip({ active, payload, label, unit = "", labelFmt }: an
     </div>
   );
 }
-
-const shortDate = (d: string) => (d ? new Date(d).toLocaleDateString("en-IN", { day: "2-digit", month: "short" }) : "");
 
 function LegendText(v: string) { return <span className="text-xs text-ink-2">{v}</span>; }
 
@@ -39,24 +38,22 @@ export function PredictedVsActual({ data, height = 260 }: { data: { date: string
         <YAxis {...AXIS} width={52} />
         <Tooltip content={<ChartTooltip unit=" kWh" labelFmt={shortDate} />} cursor={{ stroke: "var(--line-2)" }} />
         <Legend formatter={LegendText} iconType="plainline" wrapperStyle={{ paddingTop: 4 }} />
-        <Line type="monotone" dataKey="predicted_kwh" name="Predicted" stroke="var(--s-plastic)" strokeWidth={2} strokeDasharray="5 4" dot={false} connectNulls />
-        <Line type="monotone" dataKey="matched_actual_kwh" name="Actual" stroke="var(--s-organic)" strokeWidth={2} dot={false} activeDot={{ r: 4, strokeWidth: 2, stroke: "var(--panel)" }} connectNulls />
+        <Line type="monotone" dataKey="predicted_kwh" name={t("Predicted")} stroke="var(--s-plastic)" strokeWidth={2} strokeDasharray="5 4" dot={false} connectNulls />
+        <Line type="monotone" dataKey="matched_actual_kwh" name={t("Actual")} stroke="var(--gold)" strokeWidth={2} dot={false} activeDot={{ r: 4, strokeWidth: 2, stroke: "var(--panel)" }} connectNulls />
       </LineChart>
     </ResponsiveContainer>
   );
 }
 
 export function TrendArea({ data, dataKey, name, unit = "", color = "var(--s-organic)", height = 220 }: { data: any[]; dataKey: string; name: string; unit?: string; color?: string; height?: number }) {
-  const gid = `g-${dataKey}`;
   return (
     <ResponsiveContainer width="100%" height={height}>
       <AreaChart data={data} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
-        <defs><linearGradient id={gid} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={color} stopOpacity={0.28} /><stop offset="1" stopColor={color} stopOpacity={0} /></linearGradient></defs>
         {GRID}
         <XAxis dataKey="date" tickFormatter={shortDate} {...AXIS} minTickGap={24} />
         <YAxis {...AXIS} width={52} />
         <Tooltip content={<ChartTooltip unit={unit} labelFmt={shortDate} />} cursor={{ stroke: "var(--line-2)" }} />
-        <Area type="monotone" dataKey={dataKey} name={name} stroke={color} strokeWidth={2} fill={`url(#${gid})`} />
+        <Area type="monotone" dataKey={dataKey} name={name} stroke={color} strokeWidth={2} fill={color} fillOpacity={0.12} />
       </AreaChart>
     </ResponsiveContainer>
   );
@@ -67,8 +64,8 @@ export function TrendArea({ data, dataKey, name, unit = "", color = "var(--s-org
 export function InputOutputPair({ data }: { data: any[] }) {
   return (
     <div className="grid gap-4 md:grid-cols-2">
-      <div><div className="mb-1 text-[11px] text-ink-3">Waste input (kg/day)</div><SimpleBars data={data} dataKey="input_kg" name="Input" unit=" kg" color="var(--s-paper)" /></div>
-      <div><div className="mb-1 text-[11px] text-ink-3">Energy output (kWh/day)</div><SimpleBars data={data} dataKey="actual_kwh" name="Energy" unit=" kWh" color="var(--s-organic)" /></div>
+      <div><div className="mb-1 text-xs text-ink-3">{t("Waste input (kg/day)")}</div><SimpleBars data={data} dataKey="input_kg" name={t("Input")} unit=" kg" color="var(--s-paper)" /></div>
+      <div><div className="mb-1 text-xs text-ink-3">{t("Energy output (kWh/day)")}</div><SimpleBars data={data} dataKey="actual_kwh" name={t("Energy")} unit=" kWh" color="var(--gold)" /></div>
     </div>
   );
 }
@@ -80,7 +77,7 @@ export function SimpleBars({ data, dataKey, name, unit = "", color = "var(--s-or
         {GRID}
         <XAxis dataKey={xKey} tickFormatter={xKey === "date" ? shortDate : undefined} {...AXIS} minTickGap={20} />
         <YAxis {...AXIS} width={52} />
-        <Tooltip content={<ChartTooltip unit={unit} labelFmt={xKey === "date" ? shortDate : undefined} />} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
+        <Tooltip content={<ChartTooltip unit={unit} labelFmt={xKey === "date" ? shortDate : undefined} />} cursor={{ fill: "var(--raised)", fillOpacity: 0.6 }} />
         <Bar dataKey={dataKey} name={name} fill={color} radius={[3, 3, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
@@ -93,8 +90,8 @@ export function HBars({ data, dataKey, nameKey, unit = "", height = 220, colorFo
       <BarChart data={data} layout="vertical" margin={{ top: 0, right: 16, left: 8, bottom: 0 }} barCategoryGap={6}>
         <XAxis type="number" {...AXIS} />
         <YAxis type="category" dataKey={nameKey} {...AXIS} width={120} />
-        <Tooltip content={<ChartTooltip unit={unit} />} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
-        <Bar dataKey={dataKey} name="Value" radius={[0, 3, 3, 0]}>
+        <Tooltip content={<ChartTooltip unit={unit} />} cursor={{ fill: "var(--raised)", fillOpacity: 0.6 }} />
+        <Bar dataKey={dataKey} name={t("Value")} radius={[0, 3, 3, 0]}>
           {data.map((d, i) => <Cell key={i} fill={colorFor ? colorFor(d) : "var(--s-organic)"} />)}
         </Bar>
       </BarChart>
@@ -110,13 +107,13 @@ export function CalibrationScatter({ data, height = 260 }: { data: { predicted_k
     <ResponsiveContainer width="100%" height={height}>
       <ScatterChart margin={{ top: 8, right: 12, left: -8, bottom: 8 }}>
         <CartesianGrid stroke="var(--line)" />
-        <XAxis type="number" dataKey="predicted_kwh" name="Predicted" unit=" kWh" {...AXIS} domain={[0, Math.ceil(max)]} />
-        <YAxis type="number" dataKey="actual_kwh" name="Actual" unit=" kWh" {...AXIS} width={64} domain={[0, Math.ceil(max)]} />
+        <XAxis type="number" dataKey="predicted_kwh" name={t("Predicted")} unit=" kWh" {...AXIS} domain={[0, Math.ceil(max)]} />
+        <YAxis type="number" dataKey="actual_kwh" name={t("Actual")} unit=" kWh" {...AXIS} width={64} domain={[0, Math.ceil(max)]} />
         <ZAxis range={[36, 36]} />
         <ReferenceLine segment={[{ x: 0, y: 0 }, { x: max, y: max }]} stroke="var(--ink-3)" strokeDasharray="4 4" />
         <Tooltip content={({ active, payload }: any) => active && payload?.length ? (
-          <div className="rounded border border-line-2 bg-raised px-3 py-2 text-xs"><div className="text-ink">{payload[0].payload.label} · {payload[0].payload.stream}</div>
-            <div className="num text-ink-2">pred {n(payload[0].payload.predicted_kwh)} · actual {n(payload[0].payload.actual_kwh)} kWh</div></div>) : null} />
+          <div className="rounded-md border border-line-2 bg-panel px-3 py-2 text-xs"><div className="text-ink">{payload[0].payload.label} · {STREAM_LABEL[payload[0].payload.stream] ?? payload[0].payload.stream}</div>
+            <div className="num text-ink-2">{t("Predicted")} {n(payload[0].payload.predicted_kwh)} · {t("Actual")} {n(payload[0].payload.actual_kwh)} kWh</div></div>) : null} />
         <Legend formatter={LegendText} />
         {groups.map((g) => <Scatter key={g.s} name={STREAM_LABEL[g.s]} data={g.rows} fill={STREAM_COLOR[g.s]} fillOpacity={0.8} stroke="var(--panel)" strokeWidth={1} />)}
       </ScatterChart>
@@ -138,14 +135,14 @@ export function ForecastChart({ history, forecast, height = 240 }: { history: { 
         <Tooltip content={({ active, payload, label }: any) => {
           if (!active || !payload?.length) return null;
           const p = payload[0].payload;
-          return <div className="rounded border border-line-2 bg-raised px-3 py-2 text-xs"><div className="text-ink-3">{shortDate(label)}</div>
-            {p.actual != null && <div className="num">Actual {n(p.actual)} kg</div>}
-            {p.forecast != null && <div className="num">Forecast {n(p.forecast)} kg <span className="text-ink-3">({n(p.band[0])}–{n(p.band[1])})</span></div>}</div>;
+          return <div className="rounded-md border border-line-2 bg-panel px-3 py-2 text-xs"><div className="text-ink-3">{shortDate(label)}</div>
+            {p.actual != null && <div className="num">{t("Recorded")} {n(p.actual)} kg</div>}
+            {p.forecast != null && <div className="num">{t("Forecast")} {n(p.forecast)} kg <span className="text-ink-3">({n(p.band[0])}–{n(p.band[1])})</span></div>}</div>;
         }} />
         <Legend formatter={LegendText} />
-        <Area dataKey="band" name="80% interval" fill="var(--s-plastic)" fillOpacity={0.15} stroke="none" />
-        <Line dataKey="actual" name="Recorded" stroke="var(--ink-2)" strokeWidth={1.6} dot={false} />
-        <Line dataKey="forecast" name="Forecast" stroke="var(--s-plastic)" strokeWidth={2} strokeDasharray="5 4" dot={{ r: 2.5 }} />
+        <Area dataKey="band" name={t("80% range")} fill="var(--s-plastic)" fillOpacity={0.15} stroke="none" />
+        <Line dataKey="actual" name={t("Recorded")} stroke="var(--ink-2)" strokeWidth={1.6} dot={false} />
+        <Line dataKey="forecast" name={t("Forecast")} stroke="var(--s-plastic)" strokeWidth={2} strokeDasharray="5 4" dot={{ r: 2.5 }} />
       </ComposedChart>
     </ResponsiveContainer>
   );
@@ -172,7 +169,7 @@ export function CompositionBar({ comp, totalKg, height = 14 }: { comp: Record<st
 // ------------------------------------------------------------------ Sankey (waste → stream → pathway → outcome)
 const NODE_COLOR: Record<string, string> = {
   Organic: "var(--s-organic)", Plastic: "var(--s-plastic)", Paper: "var(--s-paper)", Metal: "var(--s-metal)", Other: "var(--s-other)",
-  "Useful energy": "var(--accent)", "Recycled material": "var(--ink-2)", "Pending / residual": "var(--ink-3)",
+  "Useful energy": "var(--gold)", "Recycled material": "var(--ink-2)", "Pending / residual": "var(--ink-3)",
 };
 
 function SankeyNode(props: any) {
@@ -183,7 +180,7 @@ function SankeyNode(props: any) {
     <Layer>
       <Rectangle x={x} y={y} width={width} height={Math.max(2, height)} fill={color} fillOpacity={0.95} radius={2} />
       <text x={right ? x - 6 : x + width + 6} y={y + height / 2} textAnchor={right ? "end" : "start"} dominantBaseline="middle" fontSize={11} fill="var(--ink)">
-        {payload.name}
+        {t(payload.name)}
         <tspan fill="var(--ink-3)" dx={5} className="num">{payload.kwh != null ? `${n(payload.kwh)} kWh` : `${n(payload.value / 1000, 1)} t`}</tspan>
       </text>
     </Layer>
@@ -200,15 +197,15 @@ function SankeyLink(props: any) {
 }
 
 export function FlowSankey({ data, height = 360 }: { data: { nodes: any[]; links: any[] }; height?: number }) {
-  if (!data?.links?.length) return <div className="py-10 text-center text-sm text-ink-3">No flows in this period yet.</div>;
+  if (!data?.links?.length) return <div className="py-10 text-center text-sm text-ink-3">{t("No flows in this period yet.")}</div>;
   return (
     <ResponsiveContainer width="100%" height={height}>
       <Sankey data={data} node={<SankeyNode />} link={<SankeyLink />} nodePadding={14} nodeWidth={8} margin={{ top: 8, right: 150, bottom: 8, left: 4 }} iterations={48}>
         <Tooltip content={({ active, payload }: any) => {
           if (!active || !payload?.length) return null;
           const p = payload[0].payload?.payload ?? payload[0].payload;
-          const label = p.source ? `${p.source.name} → ${p.target.name}` : p.name;
-          return <div className="rounded border border-line-2 bg-raised px-3 py-2 text-xs"><div className="text-ink">{label}</div><div className="num text-ink-2">{n(p.value)} kg</div></div>;
+          const label = p.source ? `${t(p.source.name)} → ${t(p.target.name)}` : t(p.name);
+          return <div className="rounded-md border border-line-2 bg-panel px-3 py-2 text-xs"><div className="text-ink">{label}</div><div className="num text-ink-2">{n(p.value)} kg</div></div>;
         }} />
       </Sankey>
     </ResponsiveContainer>

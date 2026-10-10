@@ -3,16 +3,17 @@ import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAt
 import Link from "next/link";
 import { Loader2, AlertTriangle, Info, OctagonAlert, CheckCircle2 } from "lucide-react";
 import { cx } from "@/lib/format";
+import { t, tEnum } from "@/lib/i18n";
 
 export function Panel({ title, subtitle, actions, children, className, bodyClass, id }: {
   title?: ReactNode; subtitle?: ReactNode; actions?: ReactNode; children: ReactNode; className?: string; bodyClass?: string; id?: string;
 }) {
   return (
-    <section id={id} className={cx("min-w-0 rounded-md border border-line bg-panel", className)}>
+    <section id={id} className={cx("min-w-0 rounded-lg border border-line bg-panel shadow-[var(--shadow)]", className)}>
       {(title || actions) && (
         <header className="flex flex-wrap items-start justify-between gap-3 border-b border-line px-4 py-3">
           <div className="min-w-0">
-            {title && <h2 className="text-[13px] font-semibold tracking-wide text-ink">{title}</h2>}
+            {title && <h2 className="text-sm font-semibold text-ink">{title}</h2>}
             {subtitle && <p className="mt-0.5 text-xs text-ink-3">{subtitle}</p>}
           </div>
           {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
@@ -23,16 +24,16 @@ export function Panel({ title, subtitle, actions, children, className, bodyClass
   );
 }
 
+/** One figure with a caption. `accent` marks energy output, which is the one number shown in marigold. */
 export function Kpi({ label, value, unit, sub, icon, accent, href }: { label: string; value: ReactNode; unit?: string; sub?: ReactNode; icon?: ReactNode; accent?: boolean; href?: string }) {
   const body = (
-    <div className={cx("group relative h-full overflow-hidden rounded-md border bg-panel px-4 py-3 transition-colors", accent ? "border-accent/30" : "border-line", href && "hover:border-line-2")}>
-      {accent && <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-accent/70 to-transparent" />}
-      <div className="flex items-center justify-between text-[11px] font-medium uppercase tracking-[0.08em] text-ink-3">
+    <div className={cx("group h-full rounded-lg border bg-panel px-4 py-3 shadow-[var(--shadow)] transition-colors", "border-line", href && "hover:border-line-2")}>
+      <div className="flex items-center justify-between gap-2 text-xs text-ink-3">
         <span>{label}</span>
-        {icon && <span className="text-ink-3 group-hover:text-ink-2">{icon}</span>}
+        {icon && <span className="text-ink-3">{icon}</span>}
       </div>
       <div className="mt-2 flex items-baseline gap-1.5">
-        <span className="num text-2xl font-semibold text-ink">{value}</span>
+        <span className={cx("num text-2xl font-medium", accent ? "text-gold" : "text-ink")}>{value}</span>
         {unit && <span className="text-xs text-ink-3">{unit}</span>}
       </div>
       {sub && <div className="mt-1 text-xs text-ink-3">{sub}</div>}
@@ -43,45 +44,46 @@ export function Kpi({ label, value, unit, sub, icon, accent, href }: { label: st
 
 const TONES = {
   neutral: "border-line-2 text-ink-2 bg-raised",
-  green: "border-accent/30 text-accent bg-accent/10",
-  cyan: "border-cyan/30 text-cyan bg-cyan/10",
-  warn: "border-warn/30 text-warn bg-warn/10",
-  crit: "border-crit/30 text-crit bg-crit/10",
+  green: "border-accent/35 text-accent bg-accent/10",
+  blue: "border-blue/35 text-blue bg-blue/10",
+  gold: "border-gold/35 text-gold bg-gold/10",
+  warn: "border-warn/35 text-warn bg-warn/10",
+  crit: "border-crit/40 text-crit bg-crit/10",
 };
 export type Tone = keyof typeof TONES;
 
 export function Badge({ children, tone = "neutral", className }: { children: ReactNode; tone?: Tone; className?: string }) {
-  return <span className={cx("inline-flex items-center gap-1 whitespace-nowrap rounded border px-1.5 py-0.5 text-[11px] font-medium", TONES[tone], className)}>{children}</span>;
+  return <span className={cx("inline-flex items-center gap-1 whitespace-nowrap rounded border px-1.5 py-0.5 text-xs", TONES[tone], className)}>{children}</span>;
 }
 
 const STATUS_TONE: Record<string, Tone> = {
-  REQUESTED: "neutral", ASSIGNED: "cyan", EN_ROUTE: "cyan", COLLECTED: "green", DELIVERED: "green", CANCELLED: "crit",
-  planned: "neutral", active: "cyan", completed: "green", cancelled: "crit",
-  awaiting_classification: "warn", in_transit: "cyan", classified: "cyan", dispatched: "cyan", processed: "green",
-  pending_review: "warn", confirmed: "green", corrected: "cyan", rejected: "crit",
-  proposed: "warn", approved: "green", overridden: "cyan",
-  online: "green", maintenance: "warn", offline: "crit", idle: "neutral", assigned: "cyan", en_route: "cyan",
-  open: "warn", acknowledged: "neutral", resolved: "green", running: "cyan", failed: "crit", archived: "neutral",
+  REQUESTED: "neutral", ASSIGNED: "blue", EN_ROUTE: "blue", COLLECTED: "green", DELIVERED: "green", CANCELLED: "crit",
+  planned: "neutral", active: "blue", completed: "green", cancelled: "crit",
+  awaiting_classification: "warn", in_transit: "blue", classified: "blue", dispatched: "blue", processed: "green",
+  pending_review: "warn", confirmed: "green", corrected: "blue", rejected: "crit",
+  proposed: "warn", approved: "green", overridden: "blue",
+  online: "green", maintenance: "warn", offline: "crit", idle: "neutral", assigned: "blue", en_route: "blue",
+  open: "warn", acknowledged: "neutral", resolved: "green", running: "blue", failed: "crit", archived: "neutral",
   paused: "neutral",
 };
 export function Status({ s }: { s: string }) {
-  return <Badge tone={STATUS_TONE[s] ?? "neutral"}>{s.replace(/_/g, " ")}</Badge>;
+  return <Badge tone={STATUS_TONE[s] ?? "neutral"}>{tEnum(s)}</Badge>;
 }
 
-export function SimTag({ label = "SIMULATED" }: { label?: string }) {
-  return <span title="Demo-mode data generated by the physical simulator — not a real-world measurement" className="rounded-sm border border-dashed border-warn/40 px-1 py-px text-[9px] font-semibold tracking-wider text-warn/80">{label}</span>;
+export function SimTag({ label }: { label?: string }) {
+  return <span title={t("Demo data produced by the simulator. It is not a real-world measurement.")} className="whitespace-nowrap rounded-sm border border-dashed border-warn/50 px-1 py-px text-xs text-warn">{label ?? t("Simulated")}</span>;
 }
 
 export function Button({ variant = "secondary", size = "md", loading, className, children, ...rest }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "secondary" | "ghost" | "danger"; size?: "sm" | "md"; loading?: boolean }) {
   const v = {
-    primary: "bg-accent text-[#04140b] hover:bg-[#5ae89a] border-accent font-semibold",
-    secondary: "bg-raised text-ink border-line-2 hover:border-ink-3",
+    primary: "bg-accent text-on-accent border-accent font-medium hover:opacity-90",
+    secondary: "bg-panel text-ink border-line-2 hover:border-ink-3",
     ghost: "bg-transparent text-ink-2 border-transparent hover:text-ink hover:bg-raised",
-    danger: "bg-crit/10 text-crit border-crit/30 hover:bg-crit/20",
+    danger: "bg-transparent text-crit border-crit/50 hover:bg-crit/10",
   }[variant];
   return (
     <button {...rest} disabled={rest.disabled || loading}
-      className={cx("inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded border transition-colors disabled:cursor-not-allowed disabled:opacity-50", size === "sm" ? "h-7 px-2.5 text-xs" : "h-9 px-3.5 text-sm", v, className)}>
+      className={cx("inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border transition-colors disabled:cursor-not-allowed disabled:opacity-50", size === "sm" ? "h-7 px-2.5 text-xs" : "h-9 px-3.5 text-sm", v, className)}>
       {loading && <Loader2 className="size-3.5 animate-spin" />}
       {children}
     </button>
@@ -93,8 +95,8 @@ export function PageHeader({ title, subtitle, actions, crumb }: { title: ReactNo
     <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
       <div className="min-w-0">
         {crumb && <div className="mb-1 text-xs text-ink-3">{crumb}</div>}
-        <h1 className="text-xl font-semibold tracking-tight text-ink">{title}</h1>
-        {subtitle && <p className="mt-1 max-w-3xl text-sm text-ink-2">{subtitle}</p>}
+        <h1 className="font-serif text-2xl font-medium text-ink">{title}</h1>
+        {subtitle && <p className="mt-1 max-w-3xl text-sm leading-relaxed text-ink-2">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>
@@ -102,20 +104,21 @@ export function PageHeader({ title, subtitle, actions, crumb }: { title: ReactNo
 }
 
 export function Loading({ label = "Loading" }: { label?: string }) {
-  return <div className="flex items-center gap-2 py-10 text-sm text-ink-3"><Loader2 className="size-4 animate-spin" />{label}…</div>;
+  return <div className="flex items-center gap-2 py-10 text-sm text-ink-3"><Loader2 className="size-4 animate-spin" />{t(label)}…</div>;
 }
 
 export function ErrorBox({ error }: { error: unknown }) {
-  return <div className="rounded border border-crit/30 bg-crit/10 px-3 py-2 text-sm text-crit">{(error as Error)?.message ?? String(error)}</div>;
+  const msg = (error as Error)?.message ?? String(error);
+  return <div className="rounded-md border border-crit/40 bg-crit/10 px-3 py-2 text-sm text-crit">{t(msg)}</div>;
 }
 
 export function Empty({ children }: { children: ReactNode }) {
-  return <div className="rounded border border-dashed border-line-2 px-4 py-8 text-center text-sm text-ink-3">{children}</div>;
+  return <div className="rounded-md border border-dashed border-line-2 px-4 py-8 text-center text-sm text-ink-3">{children}</div>;
 }
 
-export function Meter({ value, max = 100, tone = "green", className }: { value: number; max?: number; tone?: "green" | "cyan" | "warn" | "crit"; className?: string }) {
+export function Meter({ value, max = 100, tone = "green", className }: { value: number; max?: number; tone?: "green" | "blue" | "gold" | "warn" | "crit"; className?: string }) {
   const pct = Math.max(0, Math.min(100, (value / max) * 100));
-  const c = { green: "bg-accent", cyan: "bg-cyan", warn: "bg-warn", crit: "bg-crit" }[tone];
+  const c = { green: "bg-accent", blue: "bg-blue", gold: "bg-gold", warn: "bg-warn", crit: "bg-crit" }[tone];
   return <div className={cx("h-1.5 w-full overflow-hidden rounded-full bg-line", className)}><div className={cx("h-full rounded-full", c)} style={{ width: `${pct}%` }} /></div>;
 }
 
@@ -124,29 +127,29 @@ export function Field({ label, hint, children }: { label: string; hint?: ReactNo
     <label className="block">
       <span className="mb-1 block text-xs font-medium text-ink-2">{label}</span>
       {children}
-      {hint && <span className="mt-1 block text-[11px] text-ink-3">{hint}</span>}
+      {hint && <span className="mt-1 block text-xs text-ink-3">{hint}</span>}
     </label>
   );
 }
 export function Input(p: InputHTMLAttributes<HTMLInputElement>) {
-  return <input {...p} className={cx("h-9 w-full rounded border border-line-2 bg-canvas px-3 text-sm text-ink outline-none placeholder:text-ink-3 focus:border-accent/60", p.className)} />;
+  return <input {...p} className={cx("h-9 w-full rounded-md border border-line-2 bg-canvas px-3 text-sm text-ink outline-none placeholder:text-ink-3 focus:border-accent", p.className)} />;
 }
 export function Select({ children, ...p }: SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select {...p} className={cx("h-9 w-full rounded border border-line-2 bg-canvas px-2.5 text-sm text-ink outline-none focus:border-accent/60", p.className)}>{children}</select>;
+  return <select {...p} className={cx("h-9 w-full rounded-md border border-line-2 bg-canvas px-2.5 text-sm text-ink outline-none focus:border-accent", p.className)}>{children}</select>;
 }
 
 export function Th({ children, right, className }: { children?: ReactNode; right?: boolean; className?: string }) {
-  return <th className={cx("whitespace-nowrap border-b border-line px-3 py-2 text-[11px] font-medium uppercase tracking-wider text-ink-3", right ? "text-right" : "text-left", className)}>{children}</th>;
+  return <th className={cx("whitespace-nowrap border-b border-line px-3 py-2 text-xs font-medium text-ink-3", right ? "text-right" : "text-left", className)}>{children}</th>;
 }
 export function Td({ children, right, className, mono }: { children?: ReactNode; right?: boolean; className?: string; mono?: boolean }) {
   return <td className={cx("border-b border-line/70 px-3 py-2.5 text-sm text-ink-2", right && "text-right", mono && "num", className)}>{children}</td>;
 }
 
 export function SeverityIcon({ s, className = "size-4" }: { s: string; className?: string }) {
-  if (s === "critical") return <OctagonAlert className={cx(className, "text-crit")} aria-label="critical" />;
-  if (s === "warning") return <AlertTriangle className={cx(className, "text-warn")} aria-label="warning" />;
-  if (s === "ok") return <CheckCircle2 className={cx(className, "text-accent")} aria-label="ok" />;
-  return <Info className={cx(className, "text-cyan")} aria-label="info" />;
+  if (s === "critical") return <OctagonAlert className={cx(className, "text-crit")} aria-label={t("Critical")} />;
+  if (s === "warning") return <AlertTriangle className={cx(className, "text-warn")} aria-label={t("Warning")} />;
+  if (s === "ok") return <CheckCircle2 className={cx(className, "text-accent")} aria-label={t("OK")} />;
+  return <Info className={cx(className, "text-blue")} aria-label={t("Info")} />;
 }
 
 /** Labeled horizontal bar list (used for explainability / feature importance). */

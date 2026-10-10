@@ -2,12 +2,13 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Scale } from "lucide-react";
+
 import { api } from "@/lib/api";
 import { useAuth } from "@/store/auth";
 import { Button, ErrorBox, Input, Loading, PageHeader, Panel, Select } from "@/components/ui";
 import { ShipmentTable } from "@/features/hub/ShipmentTable";
 
+import { t } from "@/lib/i18n";
 export default function Incoming() {
   const role = useAuth((s) => s.user?.role);
   const qc = useQueryClient();
@@ -19,14 +20,14 @@ export default function Incoming() {
   const canAct = role === "hub" || role === "admin";
   return (
     <div className="space-y-5">
-      <PageHeader crumb={<Link href="/hub">Processing Hub</Link>} title="Incoming Waste" subtitle="Loads in transit and on the receiving floor."
-        actions={<Select className="w-56" value={hub} onChange={(e) => setHub(e.target.value)}><option value="">All hubs</option>{hubs.data?.map((h) => <option key={h.id} value={h.id}>{h.code} · {h.name}</option>)}</Select>} />
+      <PageHeader crumb={<Link href="/hub">{t("Processing hub")}</Link>} title={t("Incoming waste")} subtitle={t("Loads on the road and on the receiving floor.")}
+        actions={<Select className="w-56" value={hub} onChange={(e) => setHub(e.target.value)}><option value="">{t("All hubs")}</option>{hubs.data?.map((h) => <option key={h.id} value={h.id}>{h.code} · {h.name}</option>)}</Select>} />
       {canAct && (
-        <Panel title={<span className="flex items-center gap-2"><Scale className="size-4 text-warn" />Weighbridge</span>} subtitle="Record the measured weight of a received load (overrides the declared total; in-transit loads are marked received)">
+        <Panel title={t("Weighbridge")} subtitle={t("Enter the weight shown on the scale. It replaces the declared total, and a load on the road is marked as received.")}>
           <form className="flex flex-wrap items-end gap-3" onSubmit={(e) => { e.preventDefault(); weigh.mutate(); }}>
-            <Select className="w-64" value={w.id} onChange={(e) => setW({ ...w, id: e.target.value })} required><option value="">Select shipment…</option>{ships.data?.map((s) => <option key={s.id} value={s.id}>{s.code} · {s.source_label.slice(0, 30)}</option>)}</Select>
-            <Input className="w-40" type="number" min={1} placeholder="Measured kg" value={w.kg} onChange={(e) => setW({ ...w, kg: e.target.value })} required />
-            <Button variant="primary" loading={weigh.isPending}>Record weight</Button>
+            <Select className="w-64" value={w.id} onChange={(e) => setW({ ...w, id: e.target.value })} required><option value="">{t("Choose a shipment…")}</option>{ships.data?.map((s) => <option key={s.id} value={s.id}>{s.code} · {s.source_label.slice(0, 30)}</option>)}</Select>
+            <Input className="w-40" type="number" min={1} placeholder={t("Weight in kg")} value={w.kg} onChange={(e) => setW({ ...w, kg: e.target.value })} required />
+            <Button variant="primary" loading={weigh.isPending}>{t("Save the weight")}</Button>
           </form>
           {weigh.error && <div className="mt-3"><ErrorBox error={weigh.error} /></div>}
         </Panel>

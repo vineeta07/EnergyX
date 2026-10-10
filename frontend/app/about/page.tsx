@@ -1,93 +1,106 @@
+"use client";
 import Link from "next/link";
 import { PublicNav, PublicFooter } from "@/components/shell/PublicNav";
+import { t } from "@/lib/i18n";
 
 const LOOP = [
-  ["Waste network", "Generators register sources; daily generation is logged and forecast."],
-  ["Collection optimization", "Open pickups are solved as a capacitated VRP with time windows (OR-Tools)."],
-  ["Processing hub", "Loads are consolidated, weighed and queued for characterisation."],
-  ["AI characterization", "Composition model estimates organic / plastic / paper / metal / other + moisture."],
-  ["Waste-to-energy prediction", "Yield model predicts kWh per pathway and per facility, with intervals."],
-  ["Facility optimization", "Configurable utility ranks every eligible facility; decision is explained."],
-  ["Route optimization", "Dispatch route hub → facility; truck telemetry streams to the map."],
-  ["Energy conversion", "Facility processes the load (meter simulated in demo mode)."],
-  ["Actual output", "Facility reports metered kWh; error vs prediction is computed."],
-  ["Feedback", "Prediction, actual, facility, distance & cost stored as a training row."],
-  ["Model improvement", "Scheduled / drift-triggered retraining publishes a new model version."],
-  ["Better future decisions", "Next ranking uses the new model and updated historical yields."],
-];
+  ["Waste network", "Generators register their sources. Daily weights are logged and forecast."],
+  ["Collection", "Open pickups are grouped into truck routes with capacity limits and time windows."],
+  ["Processing hub", "Loads are weighed on arrival and queued for sorting."],
+  ["Sorting", "A model splits each load into organic, plastic, paper, metal and other, and estimates moisture."],
+  ["Energy prediction", "Expected kWh is predicted per technology and per plant, with a range."],
+  ["Choosing a plant", "Every eligible plant is scored. The hub operator sees why one won, and can override it."],
+  ["Delivery", "The load is dispatched from the hub to the chosen plant. Truck GPS shows on the map."],
+  ["Conversion", "The plant processes the load. In the demo the meter is simulated."],
+  ["Metered output", "The plant reports kWh. The gap against the prediction is worked out."],
+  ["Feedback", "Prediction, reading, plant, distance and cost are saved as one training row."],
+  ["Retraining", "A scheduled or drift-triggered run publishes a new model version."],
+  ["Next load", "The next ranking uses the new model and the updated plant yields."],
+] as const;
 
 const MODELS = [
-  ["1 · Waste generation forecast", "LightGBM on scale-normalised lags (1, 2, 7 days), rolling means, weekday, season and business type. Recursive 7-day forecast with residual-quantile intervals. Benchmarked against seasonal-naive."],
-  ["2 · Waste composition", "Multi-output random forest on source mix, load size and season, trained on lab audits + operator corrections (3× weight). Confidence = ensemble agreement within 6 pp. No vision model is deployed because no labelled image corpus exists — uploaded images are stored to build one."],
-  ["3 · Energy yield", "LightGBM gradient-boosted trees predicting kWh/kg from stream, technology, efficiency, compatibility, load, moisture, season and leakage-safe historical facility yield. 90% interval & calibrated confidence P(|error| ≤ 10%)."],
-  ["4 · Destination optimization", "Not a classifier: U = w₁·energy + w₂·efficiency + w₃·compatibility + w₄·capacity − w₅·cost − w₆·carbon − w₇·distance over eligible facilities (capacity, moisture limit, compatibility ≥ 50%). Monte-Carlo stability of the winner under prediction uncertainty."],
-  ["5 · Route optimization", "OR-Tools routing: capacity dimension, soft time windows, urgency-weighted drop penalties, guided local search. Nearest-neighbour + 2-opt fallback."],
-];
+  ["Waste forecast", "LightGBM on lagged daily weights (1, 2 and 7 days), rolling averages, weekday, season and business type. Gives a seven-day forecast with a range. Tested against a seasonal-naive baseline."],
+  ["Load composition", "A random forest on source mix, load size and season, trained on lab audits and hub operator corrections (counted three times). Confidence is how closely the trees agree. A photo model refines the split when sample photos are uploaded."],
+  ["Energy yield", "Gradient-boosted trees predicting kWh per kg from stream, technology, efficiency, compatibility, load, moisture, season and the plant's past yield. Gives a 90% range and a confidence that the error stays within 10%."],
+  ["Plant choice", "Not trained. A weighted score over every plant that can take the load: energy, efficiency, compatibility and spare capacity count for it; cost, carbon and distance count against it. A Monte-Carlo run checks the winner holds under prediction error."],
+  ["Routing", "OR-Tools with a capacity limit, soft time windows, higher drop penalties for urgent pickups and guided local search. Falls back to nearest-neighbour with 2-opt."],
+] as const;
 
 const AWS = [
-  ["CloudFront", "Next.js frontend + /api path routing"],
-  ["ALB → ECS Fargate", "Node.js API (Express) — auth, data, orchestration, WebSockets"],
-  ["ECS Fargate (private)", "Python AI service (FastAPI) — inference, OR-Tools, assistant"],
-  ["RDS PostgreSQL + PostGIS", "Operational DB (same schema as local embedded Postgres)"],
-  ["S3", "Waste images (presigned URLs), dataset snapshots, model artifacts"],
-  ["SageMaker", "Training jobs + Model Registry for the 3 learned models"],
-  ["EventBridge", "Domain-event bus + scheduled retraining / sweeps"],
-  ["SQS", "Async work queues (training, notifications)"],
-  ["ElastiCache Redis", "KPI cache, token revocation, rate-limit counters"],
-  ["Amazon Location Service", "Map tiles + route matrix (replaces the OSRM / OpenStreetMap road matrix used locally)"],
-  ["IoT Core", "Vehicle GPS & facility meter telemetry (replaces demo simulator)"],
-  ["CloudWatch", "Logs, metrics, model-drift alarms"],
-];
+  ["CloudFront", "Serves the web app and routes /api"],
+  ["ALB and ECS Fargate", "Node.js API: sign-in, data, the pipeline, WebSockets"],
+  ["ECS Fargate (private)", "Python service: prediction, routing, the assistant"],
+  ["RDS PostgreSQL with PostGIS", "Main database, same schema as the local one"],
+  ["S3", "Waste photos, dataset snapshots, model files"],
+  ["SageMaker", "Training jobs and model registry for the three learned models"],
+  ["EventBridge", "Event bus and scheduled retraining"],
+  ["SQS", "Queues for training and notifications"],
+  ["ElastiCache Redis", "KPI cache, revoked tokens, rate limits"],
+  ["Amazon Location Service", "Map tiles and the route matrix (OpenStreetMap locally)"],
+  ["IoT Core", "Truck GPS and plant meter feeds (a simulator in the demo)"],
+  ["CloudWatch", "Logs, metrics and model-drift alarms"],
+] as const;
 
 export default function About() {
   return (
     <div className="min-h-screen">
       <PublicNav />
-      <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-        <div className="text-xs font-medium uppercase tracking-[0.2em] text-accent">How it works</div>
-        <h1 className="mt-3 max-w-3xl text-4xl font-semibold tracking-tight">One closed loop from waste source to metered energy — and back into the model.</h1>
+      <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
+        <h1 className="max-w-3xl font-serif text-4xl font-medium leading-tight text-ink">{t("How a load of waste turns into a meter reading, and what the system learns from it.")}</h1>
 
-        <ol className="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {LOOP.map(([t, d], i) => (
-            <li key={t} className="rounded-md border border-line bg-panel p-4">
-              <div className="num text-[11px] text-accent">{String(i + 1).padStart(2, "0")}</div>
-              <div className="mt-1 text-sm font-semibold">{t}</div>
-              <p className="mt-1 text-sm text-ink-2">{d}</p>
+        <ol className="mt-10 grid border-t border-line md:grid-cols-2 md:gap-x-12">
+          {LOOP.map(([name, what], i) => (
+            <li key={name} className="grid grid-cols-[2.5rem_1fr] gap-x-3 border-b border-line py-3.5">
+              <span className="num pt-0.5 text-sm text-ink-3">{String(i + 1).padStart(2, "0")}</span>
+              <div><div className="font-medium text-ink">{t(name)}</div><p className="mt-0.5 text-sm leading-relaxed text-ink-2">{t(what)}</p></div>
             </li>
           ))}
         </ol>
 
-        <h2 className="mt-20 text-2xl font-semibold">Five models, each doing one job</h2>
-        <p className="mt-2 max-w-3xl text-ink-2">Trained offline on historical records through a validated pipeline: raw export → snapshot → validation → cleaning (missing days interpolated, robust-z outliers) → features → time-based split → training → evaluation vs naive baselines → versioned artifact → serving. Live metrics are on the AI Models page.</p>
-        <div className="mt-6 space-y-3">
-          {MODELS.map(([t, d]) => <div key={t} className="rounded-md border border-line bg-panel p-4"><div className="text-sm font-semibold text-ink">{t}</div><p className="mt-1 text-sm text-ink-2">{d}</p></div>)}
+        <div className="mt-20 grid gap-8 lg:grid-cols-[0.8fr_1.6fr]">
+          <div>
+            <h2 className="font-serif text-2xl font-medium text-ink">{t("Five models, one job each")}</h2>
+            <p className="mt-3 max-w-sm text-sm leading-relaxed text-ink-2">{t("Models are trained offline on past records: export, snapshot, validation, cleaning, features, a time-based split, evaluation against simple baselines, then a versioned file. Live scores are on the Models screen.")}</p>
+          </div>
+          <dl className="divide-y divide-line border-y border-line">
+            {MODELS.map(([name, how], i) => (
+              <div key={name} className="grid gap-1 py-4 sm:grid-cols-[11rem_1fr] sm:gap-4">
+                <dt className="font-medium text-ink"><span className="num mr-2 text-ink-3">{i + 1}</span>{t(name)}</dt>
+                <dd className="text-sm leading-relaxed text-ink-2">{t(how)}</dd>
+              </div>
+            ))}
+          </dl>
         </div>
 
-        <h2 id="architecture" className="mt-20 text-2xl font-semibold">Architecture</h2>
-        <div className="mt-6 grid gap-4 lg:grid-cols-[1fr_1.2fr]">
-          <div className="rounded-md border border-line bg-panel p-5 text-sm">
-            <div className="font-semibold">Services</div>
-            <pre className="num mt-3 overflow-x-auto text-[12px] leading-relaxed text-ink-2">{`Browser (Next.js)
-   │  REST /api  +  WebSocket /ws
-   ▼
-Node.js API  (Express, TypeScript)
-   │  JWT auth · RBAC · validation · audit
-   │  pipeline state machine · events
-   ├──► PostgreSQL  (PGlite locally, RDS in AWS)
-   └──► Python AI service (FastAPI)
-          forecast · classify · predict-energy
-          rank-facilities · optimize-routes
-          train (→ registry) · assistant
-          └─► /internal/datasets  (training data)
-              /internal/tools     (assistant)`}</pre>
-            <div className="mt-4 font-semibold">Event flow</div>
-            <p className="num mt-2 text-[12px] leading-relaxed text-ink-2">WastePickupRequested → CollectionOptimizationStarted → RouteOptimized → WasteCollected → WasteArrivedAtHub → WasteClassificationCompleted → EnergyPotentialCalculated → FacilitySelected → WasteDispatched → EnergyGenerationCompleted → ActualOutputRecorded → AITrainingDataCreated</p>
+        <h2 id="architecture" className="mt-20 font-serif text-2xl font-medium text-ink">{t("Architecture")}</h2>
+        <div className="mt-6 grid gap-8 lg:grid-cols-[1fr_1.2fr]">
+          <div>
+            <pre className="num overflow-x-auto rounded-lg border border-line bg-panel p-4 text-xs leading-relaxed text-ink-2">{`Browser (Next.js)
+   |  REST /api  +  WebSocket /ws
+   v
+Node.js API (Express, TypeScript)
+   |  JWT sign-in, roles, validation, audit log
+   |  pipeline state machine, events
+   |--> PostgreSQL (PGlite locally, RDS in AWS)
+   '--> Python service (FastAPI)
+          forecast, sort, predict energy
+          rank plants, route trucks
+          train (to registry), assistant`}</pre>
+            <p className="mt-4 text-sm font-medium text-ink">{t("Event order")}</p>
+            <p className="num mt-1 text-xs leading-relaxed text-ink-2">WastePickupRequested, CollectionOptimizationStarted, RouteOptimized, WasteCollected, WasteArrivedAtHub, WasteClassificationCompleted, EnergyPotentialCalculated, FacilitySelected, WasteDispatched, EnergyGenerationCompleted, ActualOutputRecorded, AITrainingDataCreated</p>
           </div>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {AWS.map(([s, d]) => <div key={s} className="rounded-md border border-line bg-panel px-4 py-3"><div className="text-sm font-semibold text-cyan">{s}</div><div className="mt-0.5 text-xs text-ink-2">{d}</div></div>)}
-          </div>
+          <table className="w-full self-start text-sm">
+            <tbody>
+              {AWS.map(([service, job]) => (
+                <tr key={service} className="border-b border-line align-top">
+                  <th scope="row" className="w-[40%] py-2.5 pr-3 text-left font-medium text-ink">{service}</th>
+                  <td className="py-2.5 text-ink-2">{t(job)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-        <div className="mt-12"><Link href="/login" className="rounded bg-accent px-4 py-2 text-sm font-semibold text-[#04140b]">Try the demo</Link></div>
+        <div className="mt-12"><Link href="/login" className="inline-flex h-10 items-center rounded-md bg-accent px-4 text-sm font-medium text-on-accent hover:opacity-90">{t("Open the demo")}</Link></div>
       </div>
       <PublicFooter />
     </div>

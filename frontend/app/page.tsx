@@ -1,114 +1,119 @@
 "use client";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { motion } from "framer-motion";
-import { ArrowRight, Radar, Truck, ScanSearch, Scale, Zap, RefreshCcw, MapPin, BrainCircuit, Gauge, Network } from "lucide-react";
 import { PublicNav, PublicFooter } from "@/components/shell/PublicNav";
 import { SimTag } from "@/components/ui";
-import { n } from "@/lib/format";
+import { n, NONE } from "@/lib/format";
+import { t } from "@/lib/i18n";
 
-const PIPE = [
-  { k: "DISCOVER", d: "Forecast where useful waste is accumulating", icon: Radar },
-  { k: "COLLECT", d: "OR-Tools consolidates pickups into routes", icon: Truck },
-  { k: "INTELLIGENCE", d: "AI characterises composition & moisture", icon: ScanSearch },
-  { k: "OPTIMIZE", d: "Rank every facility by net useful energy", icon: Scale },
-  { k: "ENERGY", d: "Conversion at the highest-value destination", icon: Zap },
-  { k: "LEARN", d: "Metered output retrains the models", icon: RefreshCcw },
-];
+const STAGES = [
+  ["Find", "A forecast per source says where waste is piling up, so pickups are asked for before bins overflow.", "Forecast model"],
+  ["Collect", "Open pickups are grouped into truck routes with time windows. Urgent ones are dropped last.", "Route solver"],
+  ["Weigh and sort", "The hub weighs the load. A photo sample and the source mix give the split into organic, plastic, paper and metal.", "Hub operator"],
+  ["Choose a plant", "Each plant is scored on the electricity it can make from this exact load, minus distance, cost and carbon.", "Ranking, rules you can read"],
+  ["Convert", "The plant burns, digests or sends it for recovery. The meter reading comes back as kWh.", "Plant operator"],
+  ["Learn", "Predicted and metered kWh are stored side by side. The next ranking uses the gap.", "Nightly retraining"],
+] as const;
+
+const QUESTIONS = [
+  ["Where is usable waste?", "Each source gets a seven-day forecast. Storage fill triggers a pickup request."],
+  ["What is in the load?", "Source mix, load size and season give a first split. Photos and the hub operator's corrections sharpen it."],
+  ["Which plant makes the most energy?", "A yield model predicts kWh at every plant that can take the load. The winner is the best score, not the nearest gate."],
+  ["How does it get there?", "Pickups are consolidated into routes by weight, time window and urgency. Road distances come from OpenStreetMap."],
+] as const;
 
 export default function Landing() {
   const { data } = useQuery({ queryKey: ["public-impact"], queryFn: () => fetch("/api/public/impact").then((r) => (r.ok ? r.json() : null)), refetchInterval: 20_000 });
-  const metrics = [
-    { v: data ? n(data.waste_processed_kg) : "—", u: "kg", l: "Waste processed" },
-    { v: data ? n(data.energy_kwh) : "—", u: "kWh", l: "Energy generated" },
-    { v: data ? n(data.co2_avoided_kg / 1000, 1) : "—", u: "t", l: "CO₂ avoided" },
-    { v: data?.prediction_accuracy != null ? n(data.prediction_accuracy, 1) : "—", u: "%", l: "Energy prediction accuracy" },
+  const readings = [
+    { v: data ? n(data.waste_processed_kg) : NONE, u: "kg", l: "Waste weighed at hubs" },
+    { v: data ? n(data.energy_kwh) : NONE, u: "kWh", l: "Energy metered at plants" },
+    { v: data ? n(data.co2_avoided_kg / 1000, 1) : NONE, u: "t", l: "CO₂ avoided" },
+    { v: data?.prediction_accuracy != null ? n(data.prediction_accuracy, 1) : NONE, u: "%", l: "Predicted kWh against metered kWh" },
   ];
 
   return (
     <div className="min-h-screen overflow-x-hidden">
       <PublicNav />
-      {/* HERO */}
-      <section className="relative grid-bg">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(61,220,132,0.12),transparent_60%)]" />
-        <div className="relative mx-auto grid max-w-7xl gap-12 px-4 pb-16 pt-16 sm:px-6 lg:grid-cols-[1.1fr_1fr] lg:pt-24">
+
+      {/* Hero: text on the left, a real ranking table on the right */}
+      <section className="border-b border-line">
+        <div className="mx-auto grid max-w-6xl gap-12 px-4 py-14 sm:px-6 lg:grid-cols-[1fr_1.05fr] lg:py-20">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-[11px] font-medium text-accent">
-              <span className="size-1.5 rounded-full bg-accent pulse" /> Waste-to-energy optimization infrastructure
-            </div>
-            <h1 className="mt-5 text-4xl font-semibold leading-[1.05] tracking-tight text-ink sm:text-5xl lg:text-6xl">
-              Every Waste Stream Has a <span className="bg-gradient-to-r from-accent to-cyan bg-clip-text text-transparent">Better Destination.</span>
+            <p className="text-xs tracking-[0.08em] text-ink-3">{t("Delhi NCR, 20 sources, 3 hubs, 6 plants")}</p>
+            <h1 className="mt-4 font-serif text-4xl font-medium leading-[1.12] text-ink sm:text-5xl">
+              {t("Send each load to the plant that makes the most power from it.")}
             </h1>
-            <p className="mt-5 max-w-xl text-base leading-relaxed text-ink-2 sm:text-lg">
-              AI-powered infrastructure that discovers waste, optimizes collection, identifies its highest-value energy pathway, and routes it to the facility where it can create the most useful energy.
+            <p className="mt-5 max-w-[34rem] text-base leading-relaxed text-ink-2">
+              {t("WattCycle follows waste from ward collection points to a hub scale, then picks the plant where it turns into the most electricity. A landfill takes any load and gives back nothing. A plant that suits the waste gives back power.")}
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link href="/dashboard" className="inline-flex h-11 items-center gap-2 rounded bg-accent px-5 text-sm font-semibold text-[#04140b] hover:bg-[#5ae89a]">Launch Dashboard <ArrowRight className="size-4" /></Link>
-              <Link href="/about" className="inline-flex h-11 items-center gap-2 rounded border border-line-2 px-5 text-sm text-ink hover:border-ink-3"><BrainCircuit className="size-4 text-cyan" />Explore the AI</Link>
+              <Link href="/login" className="inline-flex h-11 items-center rounded-md bg-accent px-5 text-sm font-medium text-on-accent hover:opacity-90">{t("Open the demo")}</Link>
+              <Link href="/about" className="inline-flex h-11 items-center rounded-md border border-line-2 px-5 text-sm text-ink hover:border-ink-3">{t("Read how it works")}</Link>
             </div>
-            <p className="mt-6 text-xs text-ink-3">Not the nearest facility — the one that maximises <span className="text-ink-2">useful energy</span> net of transport cost, carbon and capacity.</p>
           </div>
-          <HeroDecision />
+          <RankingBoard />
         </div>
+      </section>
 
-        {/* metrics */}
-        <div className="relative mx-auto max-w-7xl px-4 pb-16 sm:px-6">
-          <div className="grid grid-cols-2 overflow-hidden rounded-md border border-line bg-panel/70 md:grid-cols-4">
-            {metrics.map((m, i) => (
-              <div key={m.l} className={`px-5 py-5 ${i ? "border-l border-line" : ""} ${i >= 2 ? "border-t border-line md:border-t-0" : ""}`}>
-                <div className="flex items-baseline gap-1.5"><span className="num text-3xl font-semibold text-ink">{m.v}</span><span className="text-sm text-ink-3">{m.u}</span></div>
-                <div className="mt-1 flex items-center gap-2 text-xs text-ink-3">{m.l}</div>
+      {/* Readings: one strip, read like a weigh-scale display */}
+      <section className="border-b border-line bg-panel">
+        <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+          <dl className="grid grid-cols-2 gap-y-6 md:grid-cols-4">
+            {readings.map((m, i) => (
+              <div key={m.l} className={`px-4 ${i ? "md:border-l md:border-line" : "md:pl-0"} ${i === 2 ? "border-l border-line md:border-l" : ""} ${i === 1 ? "border-l border-line" : ""}`}>
+                <dd className="num flex items-baseline gap-1.5"><span className="font-serif text-4xl font-medium text-ink">{m.v}</span><span className="text-sm text-ink-3">{m.u}</span></dd>
+                <dt className="mt-1 max-w-[16rem] text-xs leading-snug text-ink-3">{t(m.l)}</dt>
               </div>
             ))}
+          </dl>
+          <p className="mt-6 flex items-center gap-2 text-xs text-ink-3"><SimTag />{t("Counters come from the demo network. Plants and zones are real; daily weights and meter readings are simulated.")}</p>
+        </div>
+      </section>
+
+      {/* The loop as a receipt: number, stage, what happens, who does it */}
+      <section className="border-b border-line">
+        <div className="mx-auto grid max-w-6xl gap-10 px-4 py-16 sm:px-6 lg:grid-cols-[0.8fr_1.6fr]">
+          <div>
+            <h2 className="font-serif text-3xl font-medium text-ink">{t("Six steps, and the last one feeds the first.")}</h2>
+            <p className="mt-4 max-w-sm text-sm leading-relaxed text-ink-2">{t("Every metered kWh is stored next to the number that was predicted for it. Retraining uses the gap, so the next ranking is a little less wrong.")}</p>
+            <PlantScene />
           </div>
-          <div className="mt-2 flex items-center gap-2 text-[11px] text-ink-3"><SimTag /> Live counters from the demo network (simulated facilities &amp; meters).</div>
+          <ol className="divide-y divide-line border-y border-line">
+            {STAGES.map(([name, what, who], i) => (
+              <li key={name} className="grid grid-cols-[2.5rem_1fr] gap-x-3 py-4 sm:grid-cols-[2.5rem_9rem_1fr_9rem]">
+                <span className="num pt-0.5 text-sm text-ink-3">{String(i + 1).padStart(2, "0")}</span>
+                <span className="font-medium text-ink">{t(name)}</span>
+                <span className="col-start-2 mt-1 text-sm leading-relaxed text-ink-2 sm:col-start-auto sm:mt-0">{t(what)}</span>
+                <span className="col-start-2 mt-1 text-xs text-ink-3 sm:col-start-auto sm:mt-0.5 sm:text-right">{t(who)}</span>
+              </li>
+            ))}
+          </ol>
         </div>
       </section>
 
-      {/* PIPELINE */}
-      <section className="border-t border-line">
-        <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6">
-          <div className="text-xs font-medium uppercase tracking-[0.2em] text-accent">The closed loop</div>
-          <h2 className="mt-3 max-w-2xl text-3xl font-semibold tracking-tight">Not waste → AI → energy. A loop that gets better every time it runs.</h2>
-          <div className="relative mt-12">
-            <svg className="absolute left-0 right-0 top-7 hidden h-2 w-full lg:block" preserveAspectRatio="none" viewBox="0 0 100 2"><line x1="4" y1="1" x2="96" y2="1" stroke="var(--accent)" strokeWidth="0.4" className="flow-line" vectorEffect="non-scaling-stroke" /></svg>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
-              {PIPE.map((p, i) => (
-                <motion.div key={p.k} initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.08 }} className="relative">
-                  <div className="relative z-10 grid size-14 place-items-center rounded-md border border-line-2 bg-panel"><p.icon className="size-6 text-accent" /></div>
-                  <div className="mt-4 text-[11px] font-semibold tracking-[0.18em] text-ink">{String(i + 1).padStart(2, "0")} · {p.k}</div>
-                  <p className="mt-1 text-sm text-ink-2">{p.d}</p>
-                </motion.div>
-              ))}
-            </div>
-            <div className="mt-8 flex items-center gap-2 text-xs text-ink-3"><RefreshCcw className="size-3.5 text-accent" /> Actual metered output becomes labelled training data → models retrain → better routing and predictions next cycle.</div>
+      {/* Four questions: plain definition list, no cards */}
+      <section className="border-b border-line bg-panel">
+        <div className="mx-auto grid max-w-6xl gap-10 px-4 py-16 sm:px-6 md:grid-cols-[1fr_1.4fr]">
+          <h2 className="font-serif text-3xl font-medium text-ink">{t("Four things the system works out for every load")}</h2>
+          <dl className="space-y-6">
+            {QUESTIONS.map(([q, a]) => (
+              <div key={q} className="border-l-2 border-line-2 pl-4">
+                <dt className="font-medium text-ink">{t(q)}</dt>
+                <dd className="mt-1 max-w-[34rem] text-sm leading-relaxed text-ink-2">{t(a)}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      </section>
+
+      {/* Closing band */}
+      <section>
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-6 px-4 py-14 sm:px-6">
+          <div className="max-w-xl">
+            <h2 className="font-serif text-2xl font-medium text-ink">{t("Watch one load go from pickup to meter in about 25 seconds.")}</h2>
+            <p className="mt-2 text-sm leading-relaxed text-ink-2">{t("Sign in with any demo role and press Run a full load. Each stage calls the real pipeline. Only the trucks and the plant meter are simulated.")}</p>
           </div>
-        </div>
-      </section>
-
-      {/* FOUR QUESTIONS */}
-      <section className="border-t border-line bg-panel/40">
-        <div className="mx-auto grid max-w-7xl gap-6 px-4 py-20 sm:px-6 md:grid-cols-2 lg:grid-cols-4">
-          {[
-            { q: "WHERE is useful waste available?", a: "LightGBM forecasts daily generation per source; storage-fill estimates trigger pickups.", icon: MapPin },
-            { q: "WHAT exactly is the waste?", a: "A composition model trained on lab audits + operator corrections estimates streams & moisture.", icon: ScanSearch },
-            { q: "WHERE does it create the most energy?", a: "A yield model predicts kWh at every compatible facility; a configurable utility ranks them.", icon: Gauge },
-            { q: "HOW should it get there?", a: "Capacitated VRP with time windows (OR-Tools) consolidates pickups and dispatches loads.", icon: Network },
-          ].map((x) => (
-            <div key={x.q} className="rounded-md border border-line bg-panel p-5">
-              <x.icon className="size-5 text-cyan" />
-              <div className="mt-4 text-sm font-semibold text-ink">{x.q}</div>
-              <p className="mt-2 text-sm text-ink-2">{x.a}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="border-t border-line">
-        <div className="mx-auto max-w-7xl px-4 py-20 text-center sm:px-6">
-          <h2 className="text-3xl font-semibold tracking-tight">See the full loop in under 30 seconds.</h2>
-          <p className="mx-auto mt-3 max-w-xl text-ink-2">Sign in with a demo role and press <span className="text-accent">Run Full Optimization</span>. Every stage calls the real pipeline — only trucks and meters are simulated.</p>
-          <Link href="/login" className="mt-8 inline-flex h-11 items-center gap-2 rounded bg-accent px-5 text-sm font-semibold text-[#04140b] hover:bg-[#5ae89a]">Open the demo <ArrowRight className="size-4" /></Link>
+          <Link href="/login" className="inline-flex h-11 items-center rounded-md bg-accent px-5 text-sm font-medium text-on-accent hover:opacity-90">{t("Open the demo")}</Link>
         </div>
       </section>
       <PublicFooter />
@@ -116,35 +121,78 @@ export default function Landing() {
   );
 }
 
-/** Illustrative decision card (hero art) — the real one is computed in the AI Decision Center. */
-function HeroDecision() {
+/** Example ranking for one organic load. The real one is computed on the Plant decisions screen. */
+function RankingBoard() {
   const rows = [
-    { f: "Bhalswa SLF", km: 34, kwh: 0, s: 31 },
+    { f: "Bhalswa landfill", km: 34, kwh: 0, s: 31 },
     { f: "Ghazipur WtE", km: 16, kwh: 576, s: 56 },
     { f: "Okhla WtE", km: 5.5, kwh: 781, s: 69 },
     { f: "Tehkhand WtE", km: 1.5, kwh: 829, s: 72, win: true },
   ];
   return (
-    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="glass relative self-center rounded-md border border-line-2 p-5 shadow-2xl">
-      <div className="flex items-center justify-between text-[11px] text-ink-3"><span className="num">facility_selection</span><span>illustrative · from a demo run</span></div>
-      <div className="mt-3 text-sm text-ink">4,230 kg organic · Okhla transfer hub → ?</div>
-      <div className="mt-4 space-y-2.5">
-        {rows.map((r, i) => (
-          <motion.div key={r.f} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 + i * 0.15 }}
-            className={`grid grid-cols-[96px_52px_1fr_32px] items-center gap-3 rounded border px-3 py-2 text-xs ${r.win ? "border-accent/40 bg-accent/10" : "border-line bg-panel/60"}`}>
-            <span className={r.win ? "font-semibold text-ink" : "text-ink-2"}>{r.f}</span>
-            <span className="num text-ink-3">{r.km} km</span>
-            <div className="h-1.5 rounded-sm bg-line"><motion.div initial={{ width: 0 }} animate={{ width: `${(r.kwh / 829) * 100}%` }} transition={{ delay: 0.6 + i * 0.15, duration: 0.8 }} className={`h-full rounded-sm ${r.win ? "bg-accent" : "bg-ink-3"}`} /></div>
-            <span className="num text-right text-ink">{r.s}</span>
-          </motion.div>
-        ))}
+    <div className="self-start rounded-lg border border-line-2 bg-panel p-5 shadow-[var(--shadow)]">
+      <div className="flex items-baseline justify-between gap-3 text-xs text-ink-3">
+        <span>{t("Example decision")}</span>
+        <span>{t("4,230 kg organic from the Okhla hub")}</span>
       </div>
-      <p className="mt-4 text-xs leading-relaxed text-ink-2">Real Delhi plants, ranked from published capacity data. Sending this organic fraction to the Bhalswa landfill would recover <span className="text-accent">0 kWh</span>; Tehkhand WtE recovers about <span className="text-accent">829 kWh</span>.</p>
-      <div className="mt-3 grid grid-cols-3 gap-2 border-t border-line pt-3 text-center text-[11px]">
-        <div><div className="text-ink-3">Predicted</div><div className="num text-ink">829 kWh</div></div>
-        <div><div className="text-ink-3">Actual</div><div className="num text-accent">845 kWh</div></div>
-        <div><div className="text-ink-3">Confidence</div><div className="num text-ink">≈ 80%</div></div>
-      </div>
-    </motion.div>
+      <table className="mt-4 w-full text-sm">
+        <thead>
+          <tr className="border-b border-line text-xs text-ink-3">
+            <th className="pb-2 text-left font-medium">{t("Plant")}</th>
+            <th className="pb-2 text-right font-medium">{t("Distance")}</th>
+            <th className="pb-2 text-right font-medium">{t("Predicted")}</th>
+            <th className="pb-2 text-right font-medium">{t("Score")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.f} className={`border-b border-line/70 ${r.win ? "bg-accent/10" : ""}`}>
+              <td className={`py-2.5 pl-2 ${r.win ? "font-medium text-ink" : "text-ink-2"}`}>{r.f}</td>
+              <td className="num py-2.5 text-right text-ink-3">{r.km} km</td>
+              <td className="num py-2.5 text-right text-ink">{r.kwh} kWh</td>
+              <td className="num py-2.5 pr-2 text-right text-ink">{r.s}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="mt-4 text-sm leading-relaxed text-ink-2">
+        {t("Sending this load to the Bhalswa landfill would recover 0 kWh. Tehkhand recovers about 829 kWh.")}
+      </p>
+      <dl className="mt-4 grid grid-cols-3 gap-2 border-t border-line pt-3 text-xs">
+        <div><dt className="text-ink-3">{t("Predicted")}</dt><dd className="num mt-0.5 text-sm text-ink">829 kWh</dd></div>
+        <div><dt className="text-ink-3">{t("Metered")}</dt><dd className="num mt-0.5 text-sm text-gold">845 kWh</dd></div>
+        <div><dt className="text-ink-3">{t("Confidence")}</dt><dd className="num mt-0.5 text-sm text-ink">80%</dd></div>
+      </dl>
+    </div>
+  );
+}
+
+/** Flat scene: a tipper truck with bags heading to a plant. Drawn in the palette, no gradients. */
+function PlantScene() {
+  return (
+    <svg viewBox="0 0 320 130" className="mt-8 w-full max-w-sm" role="img" aria-label={t("A waste truck driving towards a power plant")}>
+      <line x1="0" y1="112" x2="320" y2="112" stroke="var(--line-2)" strokeWidth="1.5" />
+      {/* plant */}
+      <rect x="214" y="58" width="76" height="54" fill="var(--raised)" stroke="var(--line-2)" />
+      <rect x="226" y="34" width="14" height="24" fill="var(--raised)" stroke="var(--line-2)" />
+      <rect x="258" y="22" width="14" height="36" fill="var(--raised)" stroke="var(--line-2)" />
+      <rect x="224" y="76" width="14" height="14" fill="var(--panel)" stroke="var(--line-2)" />
+      <rect x="246" y="76" width="14" height="14" fill="var(--panel)" stroke="var(--line-2)" />
+      <rect x="268" y="90" width="14" height="22" fill="var(--accent)" />
+      <path d="M233 30c0-6 7-6 7-12M265 18c0-6 7-6 7-12" stroke="var(--ink-3)" strokeWidth="1.2" fill="none" />
+      {/* truck */}
+      <rect x="20" y="62" width="92" height="38" fill="var(--panel)" stroke="var(--ink-2)" strokeWidth="1.5" />
+      <path d="M112 72h24l12 14v14h-36z" fill="var(--panel)" stroke="var(--ink-2)" strokeWidth="1.5" />
+      <rect x="122" y="76" width="16" height="10" fill="var(--raised)" stroke="var(--ink-2)" />
+      <circle cx="46" cy="102" r="9" fill="var(--ink-2)" /><circle cx="46" cy="102" r="3.5" fill="var(--panel)" />
+      <circle cx="128" cy="102" r="9" fill="var(--ink-2)" /><circle cx="128" cy="102" r="3.5" fill="var(--panel)" />
+      {/* bags */}
+      <path d="M30 62c0-14 16-14 16 0z" fill="var(--s-organic)" />
+      <path d="M48 62c0-18 18-18 18 0z" fill="var(--s-paper)" />
+      <path d="M68 62c0-12 14-12 14 0z" fill="var(--s-plastic)" />
+      <path d="M84 62c0-16 16-16 16 0z" fill="var(--s-organic)" />
+      {/* energy tick */}
+      <path d="M170 56l12-14M182 42h-8M182 42v8" stroke="var(--gold)" strokeWidth="1.8" fill="none" strokeLinecap="round" />
+    </svg>
   );
 }

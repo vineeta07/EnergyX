@@ -2,9 +2,11 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { useAuth, ROLE_LABEL } from "@/store/auth";
+import { useAuth, roleLabel } from "@/store/auth";
 import { Button, ErrorBox, PageHeader, Panel } from "@/components/ui";
 
+import { t } from "@/lib/i18n";
+import { NONE } from "@/lib/format";
 const LABELS: Record<string, [string, string]> = {
   energy: ["Expected energy output", "+"], efficiency: ["Facility efficiency", "+"], compatibility: ["Waste compatibility", "+"], capacity: ["Available capacity", "+"],
   transport_cost: ["Transport cost", "−"], carbon: ["Carbon emissions", "−"], distance: ["Distance", "−"],
@@ -22,28 +24,28 @@ export default function Settings() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Settings" />
-      <Panel title="Profile">
-        <dl className="grid max-w-md grid-cols-2 gap-y-2 text-sm"><dt className="text-ink-3">Name</dt><dd>{user.name}</dd><dt className="text-ink-3">Email</dt><dd>{user.email}</dd><dt className="text-ink-3">Role</dt><dd>{ROLE_LABEL[user.role]}</dd><dt className="text-ink-3">Organisation</dt><dd>{user.organization ?? "—"}</dd></dl>
+      <PageHeader title={t("Settings")} />
+      <Panel title={t("Profile")}>
+        <dl className="grid max-w-md grid-cols-2 gap-y-2 text-sm"><dt className="text-ink-3">{t("Name")}</dt><dd>{user.name}</dd><dt className="text-ink-3">{t("Email")}</dt><dd>{user.email}</dd><dt className="text-ink-3">{t("Role")}</dt><dd>{roleLabel(user.role)}</dd><dt className="text-ink-3">{t("Organisation")}</dt><dd>{user.organization ?? NONE}</dd></dl>
       </Panel>
-      <Panel title="Destination optimizer weights" subtitle="U = Σ wᵢ · benefitᵢ − Σ wⱼ · costⱼ. Weights are normalised to sum to 1 on save and recorded on every decision for traceability.">
+      <Panel title={t("How plants are scored")} subtitle={t("Score = sum of weight times benefit, minus sum of weight times cost. Weights are scaled to add up to 1 when saved, and each decision records the weights it used.")}>
         {w && (
           <div className="max-w-2xl space-y-3">
             {Object.entries(LABELS).map(([k, [label, sign]]) => (
               <div key={k} className="grid grid-cols-[200px_1fr_56px] items-center gap-3 text-sm">
-                <span className="text-ink-2"><span className={sign === "+" ? "text-accent" : "text-crit"}>{sign}</span> {label}</span>
+                <span className="text-ink-2"><span className={sign === "+" ? "text-accent" : "text-crit"}>{sign}</span> {t(label)}</span>
                 <input type="range" min={0} max={0.6} step={0.01} disabled={!admin} value={w[k]} onChange={(e) => setW({ ...w, [k]: Number(e.target.value) })} className="w-full accent-[var(--accent)]" />
                 <span className="num text-right">{(w[k] / sum).toFixed(2)}</span>
               </div>
             ))}
-            {admin ? <div className="flex gap-2 pt-2"><Button variant="primary" loading={save.isPending} onClick={() => save.mutate()}>Save weights</Button><Button variant="ghost" onClick={() => setW(data.defaults)}>Reset to defaults</Button></div>
-              : <p className="text-xs text-ink-3">Only system operators can change optimizer weights.</p>}
+            {admin ? <div className="flex gap-2 pt-2"><Button variant="primary" loading={save.isPending} onClick={() => save.mutate()}>{t("Save weights")}</Button><Button variant="ghost" onClick={() => setW(data.defaults)}>{t("Reset to defaults")}</Button></div>
+              : <p className="text-xs text-ink-3">{t("Only system operators can change the weights.")}</p>}
             {save.error && <ErrorBox error={save.error} />}
           </div>
         )}
       </Panel>
       {data?.retrain_policy && (
-        <Panel title="Retraining policy"><pre className="num text-xs text-ink-2">{JSON.stringify(data.retrain_policy, null, 2)}</pre></Panel>
+        <Panel title={t("When models retrain")}><pre className="num text-xs text-ink-2">{JSON.stringify(data.retrain_policy, null, 2)}</pre></Panel>
       )}
     </div>
   );

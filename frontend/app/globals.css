@@ -1,27 +1,97 @@
 @import "tailwindcss";
+@import "@fontsource-variable/inter/wght.css";
+@import "@fontsource-variable/fraunces/standard.css";
+@import "@fontsource-variable/fraunces/standard-italic.css";
+@import "@fontsource-variable/noto-sans-devanagari/wght.css";
+@import "@fontsource-variable/noto-sans-bengali/wght.css";
+@import "@fontsource-variable/noto-sans-tamil/wght.css";
+@import "@fontsource-variable/noto-sans-gurmukhi/wght.css";
 
-/* WattCycle design tokens — dark infrastructure console. */
+/*
+  WattCycle design tokens.
+  Warm paper in light mode, warm deep ink in dark mode. One muted teal, one marigold
+  (money and energy output only), one soft blue (rarely), terracotta for warnings.
+  Flat fills and 1px borders. No gradients, no glow.
+*/
 :root {
-  --canvas: #07090c;
-  --panel: #0d1117;
-  --raised: #121821;
-  --line: #1b222c;
-  --line-2: #273140;
-  --ink: #e6edf3;
-  --ink-2: #a3afbc;
-  --ink-3: #6c7886;
-  --accent: #3ddc84;     /* electric green — UI accent, not a data series */
-  --accent-dim: #1a5c39;
-  --cyan: #22d3ee;
-  --warn: #f5a524;
-  --crit: #f05252;
-  /* Validated categorical data palette (dark surface #0d1117): fixed order, never cycled */
-  --s-organic: #1ea85e;
-  --s-plastic: #1795b8;
-  --s-paper: #c4860f;
-  --s-metal: #8b6ff0;
-  --s-other: #d9579c;
+  --canvas: #f5f0e6;
+  --panel: #fbf8f2;
+  --raised: #efe8d9;
+  --line: #e1d9c7;
+  --line-2: #cfc5ad;
+  --ink: #2b2620;
+  --ink-2: #5a5246;
+  --ink-3: #82796a;
+  --accent: #2f6b66;       /* muted teal */
+  --accent-dim: #d3e0db;
+  --on-accent: #f7f3ea;
+  --gold: #a87414;         /* marigold, read as turmeric: money and energy only */
+  --blue: #4b6a88;         /* soft blue, used rarely */
+  --warn: #b0562f;         /* terracotta */
+  --crit: #9c3f26;
+  --shadow: 0 1px 2px rgba(60, 45, 20, 0.06);
+  --popover-shadow: 0 6px 18px rgba(60, 45, 20, 0.12);
+  /* Data series: low-saturation earth tones, always paired with a text label */
+  --s-organic: #3f7a6c;
+  --s-plastic: #5d7f9c;
+  --s-paper: #a58a58;
+  --s-metal: #6e7276;
+  --s-other: #b7a98f;
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --canvas: #1a1713;
+  --panel: #221e19;
+  --raised: #2b261f;
+  --line: #373027;
+  --line-2: #494036;
+  --ink: #ece4d3;
+  --ink-2: #bab09e;
+  --ink-3: #8c8372;
+  --accent: #78b0a4;
+  --accent-dim: #2b403b;
+  --on-accent: #1a1713;
+  --gold: #d3a24a;
+  --blue: #8ea8c3;
+  --warn: #d28263;
+  --crit: #da7255;
+  --shadow: none;
+  --popover-shadow: 0 0 0 1px #494036;
+  --s-organic: #6aa797;
+  --s-plastic: #86a3bf;
+  --s-paper: #c2a874;
+  --s-metal: #9a9ea2;
+  --s-other: #8f8470;
   color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --canvas: #1a1713;
+    --panel: #221e19;
+    --raised: #2b261f;
+    --line: #373027;
+    --line-2: #494036;
+    --ink: #ece4d3;
+    --ink-2: #bab09e;
+    --ink-3: #8c8372;
+    --accent: #78b0a4;
+    --accent-dim: #2b403b;
+    --on-accent: #1a1713;
+    --gold: #d3a24a;
+    --blue: #8ea8c3;
+    --warn: #d28263;
+    --crit: #da7255;
+    --shadow: none;
+    --popover-shadow: 0 0 0 1px #494036;
+    --s-organic: #6aa797;
+    --s-plastic: #86a3bf;
+    --s-paper: #c2a874;
+    --s-metal: #9a9ea2;
+    --s-other: #8f8470;
+    color-scheme: dark;
+  }
 }
 
 @theme inline {
@@ -35,11 +105,13 @@
   --color-ink-3: var(--ink-3);
   --color-accent: var(--accent);
   --color-accent-dim: var(--accent-dim);
-  --color-cyan: var(--cyan);
+  --color-on-accent: var(--on-accent);
+  --color-gold: var(--gold);
+  --color-blue: var(--blue);
   --color-warn: var(--warn);
   --color-crit: var(--crit);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: "Inter Variable", "Noto Sans Devanagari Variable", "Noto Sans Bengali Variable", "Noto Sans Tamil Variable", "Noto Sans Gurmukhi Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Fraunces Variable", "Noto Sans Devanagari Variable", "Noto Sans Bengali Variable", "Noto Sans Tamil Variable", "Noto Sans Gurmukhi Variable", Georgia, serif;
 }
 
 html, body {
@@ -47,38 +119,36 @@ html, body {
   color: var(--ink);
 }
 body {
-  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-sans);
+  line-height: 1.55;
+}
+/* Indic scripts need a little more line height to avoid clipped matras. */
+html[lang="hi"] body, html[lang="bn"] body, html[lang="ta"] body, html[lang="pa"] body { line-height: 1.7; }
+
+.font-serif, h1.display, h2.display { font-family: var(--font-serif); font-weight: 500; letter-spacing: 0; }
+
+.num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+
+::selection { background: color-mix(in srgb, var(--accent) 28%, transparent); }
+
+* { scrollbar-width: thin; scrollbar-color: var(--line-2) transparent; }
+
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* One quiet ambient motion at most; none when the user asks for less. */
+@keyframes soft-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+.live-dot { animation: soft-blink 3.2s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .live-dot { animation: none; }
+  * { scroll-behavior: auto !important; }
 }
 
-.num { font-family: var(--font-geist-mono), ui-monospace, monospace; font-variant-numeric: tabular-nums; }
-
-.grid-bg {
-  background-image:
-    linear-gradient(to right, rgba(255,255,255,0.025) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255,255,255,0.025) 1px, transparent 1px);
-  background-size: 40px 40px;
-}
-
-.glass {
-  background: linear-gradient(180deg, rgba(18,24,33,0.72), rgba(13,17,23,0.72));
-  backdrop-filter: blur(10px);
-}
-
-::selection { background: rgba(61,220,132,0.3); }
-
-* { scrollbar-width: thin; scrollbar-color: #273140 transparent; }
-
-@keyframes flow { to { stroke-dashoffset: -24; } }
-.flow-line { stroke-dasharray: 4 8; animation: flow 1.1s linear infinite; }
-@keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(61,220,132,0.45); } 100% { box-shadow: 0 0 0 10px rgba(61,220,132,0); } }
-.pulse { animation: pulse-ring 1.6s ease-out infinite; }
-
-.maplibregl-ctrl-attrib { background: rgba(13,17,23,0.7) !important; color: var(--ink-3) !important; font-size: 10px; }
+.maplibregl-ctrl-attrib { background: color-mix(in srgb, var(--panel) 85%, transparent) !important; color: var(--ink-3) !important; font-size: 10px; }
 .maplibregl-ctrl-attrib a { color: var(--ink-3) !important; }
-.maplibregl-popup-content { background: var(--raised) !important; color: var(--ink); border: 1px solid var(--line-2); border-radius: 6px !important; padding: 8px 10px !important; font-size: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.5) !important; }
+.maplibregl-popup-content { background: var(--panel) !important; color: var(--ink); border: 1px solid var(--line-2); border-radius: 6px !important; padding: 8px 10px !important; font-size: 12px; box-shadow: var(--popover-shadow) !important; }
 .maplibregl-popup-tip { display: none; }
-.maplibregl-ctrl-group { background: var(--raised) !important; border: 1px solid var(--line-2); }
-.maplibregl-ctrl-group button span { filter: invert(1); }
+.maplibregl-ctrl-group { background: var(--panel) !important; border: 1px solid var(--line-2); box-shadow: none !important; }
+:root[data-theme="dark"] .maplibregl-ctrl-group button span { filter: invert(1); }
 
 .md p { margin: 0.35rem 0; }
 .md ul, .md ol { margin: 0.35rem 0 0.35rem 1.1rem; }
@@ -86,4 +156,3 @@ body {
 .md ol { list-style: decimal; }
 .md table { border-collapse: collapse; margin: 0.5rem 0; font-size: 11px; }
 .md th, .md td { border: 1px solid var(--line-2); padding: 3px 6px; text-align: left; }
-.md strong { color: var(--ink); }
