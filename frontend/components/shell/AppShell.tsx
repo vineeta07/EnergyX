@@ -95,7 +95,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <div className="text-xs text-ink">{user.name}</div>
                 <div className="text-xs text-ink-3">{roleLabel(user.role)}</div>
               </div>
-              <button title={t("Sign out")} aria-label={t("Sign out")} onClick={async () => { await api.post("/auth/logout").catch(() => {}); clear(); router.replace("/login"); }} className="ml-1 text-ink-3 hover:text-ink"><LogOut className="size-4" /></button>
+              <button title={t("Log out")} aria-label={t("Log out")} onClick={async () => { await api.post("/auth/logout").catch(() => {}); clear(); router.replace("/login"); }} className="ml-1 text-ink-3 hover:text-ink"><LogOut className="size-4" /></button>
             </div>
           </div>
         </header>

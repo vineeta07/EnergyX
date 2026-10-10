@@ -17,8 +17,8 @@ export function PublicNav() {
         <div className="ml-auto flex items-center gap-2">
           <LangSwitcher />
           <ThemeToggle />
-          <Link href="/login" className="hidden rounded-md px-3 py-1.5 text-sm text-ink-2 hover:text-ink sm:block">{t("Sign in")}</Link>
-          <Link href="/login" className="rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-on-accent hover:opacity-90">{t("Open the demo")}</Link>
+          <Link href="/login" className="hidden rounded-md px-3 py-1.5 text-sm text-ink-2 hover:text-ink sm:block">{t("Login")}</Link>
+          <Link href="/login" className="rounded-full bg-accent px-4 py-1.5 text-sm font-medium text-on-accent hover:opacity-90">{t("Open dashboard")}</Link>
         </div>
       </div>
     </header>
@@ -31,7 +31,7 @@ export function PublicFooter() {
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-8 text-xs text-ink-3 sm:px-6">
         <Logo />
         <span>{t("Demo figures come from a simulator and are marked as such. Built for the Amazon hackathon.")}</span>
-        <div className="flex gap-4"><Link href="/about">{t("How it works")}</Link><Link href="/impact">{t("Impact")}</Link><Link href="/login">{t("Sign in")}</Link></div>
+        <div className="flex gap-4"><Link href="/about">{t("How it works")}</Link><Link href="/impact">{t("Impact")}</Link><Link href="/login">{t("Login")}</Link></div>
       </div>
     </footer>
   );

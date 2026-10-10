@@ -41,29 +41,30 @@ export default function Login() {
       <div className="flex flex-col px-6 py-8 sm:px-12">
         <div className="flex items-center justify-between"><Logo /><div className="flex gap-2"><LangSwitcher /><ThemeToggle /></div></div>
         <div className="mx-auto my-auto w-full max-w-sm py-12">
-          <h1 className="font-serif text-3xl font-medium text-ink">{t("Sign in")}</h1>
-          <p className="mt-2 text-sm text-ink-2">{t("Use your WattCycle account, or open one of the demo roles on the right.")}</p>
+          <h1 className="font-serif text-3xl font-medium text-ink">{t("Login")}</h1>
+          <p className="mt-2 text-sm text-ink-2">{t("Use your WattCycle account, or pick a demo role.")}</p>
           <form className="mt-6 space-y-4" onSubmit={(e) => { e.preventDefault(); login(email, password); }}>
             <Field label={t("Email")}><Input type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></Field>
             <Field label={t("Password")}><Input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required /></Field>
             {err != null && <ErrorBox error={err} />}
-            <Button variant="primary" className="w-full" loading={busy === email}>{t("Sign in")}</Button>
+            <Button variant="primary" className="w-full" loading={busy === email}>{t("Login")}</Button>
           </form>
           <p className="mt-4 text-sm text-ink-3">{t("No account yet?")} <Link href="/register" className="text-accent underline underline-offset-2">{t("Register your organisation")}</Link></p>
         </div>
       </div>
       <div className="border-l border-line bg-panel px-6 py-12 sm:px-12 lg:py-20">
         <div className="mx-auto max-w-md">
-          <h2 className="font-serif text-2xl font-medium text-ink">{t("One network, five roles")}</h2>
-          <p className="mt-2 text-sm leading-relaxed text-ink-2">{t("Each role sees the screens and buttons its job needs. Every demo account uses the password")} <code className="num rounded bg-raised px-1 text-ink">demo1234</code>.</p>
+          <span className="inline-flex rounded-full border border-dashed border-warn/60 px-2.5 py-0.5 text-xs text-warn">{t("Demo mode")}</span>
+          <h2 className="mt-3 font-serif text-2xl font-medium text-ink">{t("One network, five roles")}</h2>
+          <p className="mt-2 text-sm leading-relaxed text-ink-2">{t("Each role sees the screens and buttons its job needs. These accounts run in demo mode on simulated data.")}</p>
           <ul className="mt-6 divide-y divide-line border-y border-line">
             {DEMO.map((d) => (
               <li key={d.email}>
                 <button onClick={() => login(d.email, "demo1234")} disabled={!!busy}
-                  className="flex w-full items-center gap-3 px-1 py-3.5 text-left transition-colors hover:bg-raised disabled:opacity-60">
+                  className="group flex w-full items-center gap-3 rounded-xl px-3 py-3.5 text-left transition-all hover:bg-raised hover:pl-4 disabled:opacity-60">
                   <d.icon className="size-5 shrink-0 text-ink-3" />
                   <span className="min-w-0 flex-1"><span className="block text-sm font-medium text-ink">{t(d.role)}</span><span className="block text-xs leading-snug text-ink-3">{t(d.d)}</span></span>
-                  <span className="shrink-0 text-xs text-accent">{busy === d.email ? t("Signing in…") : t("Sign in as this role")}</span>
+                  <span className="shrink-0 text-xs text-accent">{busy === d.email ? t("Logging in…") : t("Open dashboard")}</span>
                 </button>
               </li>
             ))}

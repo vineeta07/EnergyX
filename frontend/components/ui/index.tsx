@@ -9,7 +9,7 @@ export function Panel({ title, subtitle, actions, children, className, bodyClass
   title?: ReactNode; subtitle?: ReactNode; actions?: ReactNode; children: ReactNode; className?: string; bodyClass?: string; id?: string;
 }) {
   return (
-    <section id={id} className={cx("min-w-0 rounded-lg border border-line bg-panel shadow-[var(--shadow)]", className)}>
+    <section id={id} className={cx("min-w-0 rounded-xl border border-line bg-panel shadow-[var(--shadow)]", className)}>
       {(title || actions) && (
         <header className="flex flex-wrap items-start justify-between gap-3 border-b border-line px-4 py-3">
           <div className="min-w-0">
@@ -27,7 +27,7 @@ export function Panel({ title, subtitle, actions, children, className, bodyClass
 /** One figure with a caption. `accent` marks energy output, which is the one number shown in marigold. */
 export function Kpi({ label, value, unit, sub, icon, accent, href }: { label: string; value: ReactNode; unit?: string; sub?: ReactNode; icon?: ReactNode; accent?: boolean; href?: string }) {
   const body = (
-    <div className={cx("group h-full rounded-lg border bg-panel px-4 py-3 shadow-[var(--shadow)] transition-colors", "border-line", href && "hover:border-line-2")}>
+    <div className={cx("group h-full rounded-xl border bg-panel px-4 py-3 shadow-[var(--shadow)] transition-colors", "border-line", href && "hover:border-line-2")}>
       <div className="flex items-center justify-between gap-2 text-xs text-ink-3">
         <span>{label}</span>
         {icon && <span className="text-ink-3">{icon}</span>}

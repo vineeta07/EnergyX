@@ -5,13 +5,13 @@ export type Theme = "light" | "dark";
 const STORAGE_KEY = "wattcycle-theme";
 
 /** Runs in <head> before paint so the page never flashes the wrong theme. */
-export const THEME_BOOT_SCRIPT = `(function(){var t=null;try{t=localStorage.getItem("${STORAGE_KEY}")}catch(e){}try{if(t!=="light"&&t!=="dark"){t=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}document.documentElement.setAttribute("data-theme",t)}catch(e){}})();`;
+export const THEME_BOOT_SCRIPT = `(function(){var t=null;try{t=localStorage.getItem("${STORAGE_KEY}")}catch(e){}try{if(t!=="light"&&t!=="dark"){t="light"}document.documentElement.setAttribute("data-theme",t)}catch(e){}})();`;
 
-/** The theme actually on screen: the attribute if set, otherwise the system setting. */
+/** The theme actually on screen: the attribute if set. Light is the default, whatever the system setting says. */
 function effectiveTheme(): Theme {
   const attr = document.documentElement.getAttribute("data-theme");
   if (attr === "dark" || attr === "light") return attr;
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  return "light";
 }
 
 interface ThemeState {

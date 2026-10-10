@@ -14,16 +14,16 @@
   Flat fills and 1px borders. No gradients, no glow.
 */
 :root {
-  --canvas: #f5f0e6;
-  --panel: #fbf8f2;
-  --raised: #efe8d9;
-  --line: #e1d9c7;
+  --canvas: #f8f2e6;
+  --panel: #fffaf0;
+  --raised: #f0e7d4;
+  --line: #e4dac4;
   --line-2: #cfc5ad;
   --ink: #2b2620;
   --ink-2: #5a5246;
   --ink-3: #82796a;
-  --accent: #2f6b66;       /* muted teal */
-  --accent-dim: #d3e0db;
+  --accent: #3d7b6f;       /* muted teal */
+  --accent-dim: #d6e6df;
   --on-accent: #f7f3ea;
   --gold: #a87414;         /* marigold, read as turmeric: money and energy only */
   --blue: #4b6a88;         /* soft blue, used rarely */
@@ -41,57 +41,29 @@
 }
 
 :root[data-theme="dark"] {
-  --canvas: #1a1713;
-  --panel: #221e19;
-  --raised: #2b261f;
-  --line: #373027;
-  --line-2: #494036;
-  --ink: #ece4d3;
+  --canvas: #27221c;
+  --panel: #302a23;
+  --raised: #3a332b;
+  --line: #473f35;
+  --line-2: #5a5044;
+  --ink: #f1e9d9;
   --ink-2: #bab09e;
   --ink-3: #8c8372;
-  --accent: #78b0a4;
-  --accent-dim: #2b403b;
-  --on-accent: #1a1713;
+  --accent: #8fc4b5;
+  --accent-dim: #37504a;
+  --on-accent: #27221c;
   --gold: #d3a24a;
   --blue: #8ea8c3;
   --warn: #d28263;
   --crit: #da7255;
   --shadow: none;
-  --popover-shadow: 0 0 0 1px #494036;
+  --popover-shadow: 0 0 0 1px #5a5044;
   --s-organic: #6aa797;
   --s-plastic: #86a3bf;
   --s-paper: #c2a874;
   --s-metal: #9a9ea2;
   --s-other: #8f8470;
   color-scheme: dark;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --canvas: #1a1713;
-    --panel: #221e19;
-    --raised: #2b261f;
-    --line: #373027;
-    --line-2: #494036;
-    --ink: #ece4d3;
-    --ink-2: #bab09e;
-    --ink-3: #8c8372;
-    --accent: #78b0a4;
-    --accent-dim: #2b403b;
-    --on-accent: #1a1713;
-    --gold: #d3a24a;
-    --blue: #8ea8c3;
-    --warn: #d28263;
-    --crit: #da7255;
-    --shadow: none;
-    --popover-shadow: 0 0 0 1px #494036;
-    --s-organic: #6aa797;
-    --s-plastic: #86a3bf;
-    --s-paper: #c2a874;
-    --s-metal: #9a9ea2;
-    --s-other: #8f8470;
-    color-scheme: dark;
-  }
 }
 
 @theme inline {

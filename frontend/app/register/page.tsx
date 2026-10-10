@@ -49,7 +49,7 @@ export default function Register() {
           {err != null && <ErrorBox error={err} />}
           <Button variant="primary" className="w-full" loading={busy}>{t("Create account")}</Button>
         </form>
-        <p className="mt-4 text-sm text-ink-3">{t("Already registered?")} <Link href="/login" className="text-accent underline underline-offset-2">{t("Sign in")}</Link></p>
+        <p className="mt-4 text-sm text-ink-3">{t("Already registered?")} <Link href="/login" className="text-accent underline underline-offset-2">{t("Login")}</Link></p>
       </div>
     </div>
   );
