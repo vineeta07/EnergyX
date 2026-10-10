@@ -53,7 +53,7 @@ opsRouter.post("/pickups/quote", requireRole("generator", "fleet", "admin"), ah(
   // Open requests within 6 km are consolidation candidates for the same truck.
   const nearby = open.filter((o: any) => o.lat != null && geo.roadKm(src, o) < 6).slice(0, 3);
   const km = geo.roadKm(src, hub) * 2;
-  const share = Math.min(1, b.quantity_kg / 2500);
+  const share = Math.min(1, b.quantity_kg / 9000);
   res.json({
     source: { id: src.id, name: src.name, address: src.address, lat: src.lat, lng: src.lng, waste_type: src.waste_type },
     hub: { id: hub.id, code: hub.code, name: hub.name },

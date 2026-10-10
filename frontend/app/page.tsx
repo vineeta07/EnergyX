@@ -119,29 +119,30 @@ export default function Landing() {
 /** Illustrative decision card (hero art) — the real one is computed in the AI Decision Center. */
 function HeroDecision() {
   const rows = [
-    { f: "Facility C", km: 12, kwh: 155, s: 64 },
-    { f: "Facility A", km: 20, kwh: 179, s: 70 },
-    { f: "Facility B", km: 35, kwh: 265, s: 87, win: true },
+    { f: "Bhalswa SLF", km: 34, kwh: 0, s: 31 },
+    { f: "Ghazipur WtE", km: 16, kwh: 576, s: 56 },
+    { f: "Okhla WtE", km: 5.5, kwh: 781, s: 69 },
+    { f: "Tehkhand WtE", km: 1.5, kwh: 829, s: 72, win: true },
   ];
   return (
     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="glass relative self-center rounded-md border border-line-2 p-5 shadow-2xl">
       <div className="flex items-center justify-between text-[11px] text-ink-3"><span className="num">facility_selection</span><span>illustrative · from a demo run</span></div>
-      <div className="mt-3 text-sm text-ink">620 kg organic · Okhla Hub → ?</div>
+      <div className="mt-3 text-sm text-ink">4,230 kg organic · Okhla transfer hub → ?</div>
       <div className="mt-4 space-y-2.5">
         {rows.map((r, i) => (
           <motion.div key={r.f} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 + i * 0.15 }}
-            className={`grid grid-cols-[88px_56px_1fr_36px] items-center gap-3 rounded border px-3 py-2 text-xs ${r.win ? "border-accent/40 bg-accent/10" : "border-line bg-panel/60"}`}>
+            className={`grid grid-cols-[96px_52px_1fr_32px] items-center gap-3 rounded border px-3 py-2 text-xs ${r.win ? "border-accent/40 bg-accent/10" : "border-line bg-panel/60"}`}>
             <span className={r.win ? "font-semibold text-ink" : "text-ink-2"}>{r.f}</span>
             <span className="num text-ink-3">{r.km} km</span>
-            <div className="h-1.5 rounded-sm bg-line"><motion.div initial={{ width: 0 }} animate={{ width: `${(r.kwh / 265) * 100}%` }} transition={{ delay: 0.6 + i * 0.15, duration: 0.8 }} className={`h-full rounded-sm ${r.win ? "bg-accent" : "bg-ink-3"}`} /></div>
+            <div className="h-1.5 rounded-sm bg-line"><motion.div initial={{ width: 0 }} animate={{ width: `${(r.kwh / 829) * 100}%` }} transition={{ delay: 0.6 + i * 0.15, duration: 0.8 }} className={`h-full rounded-sm ${r.win ? "bg-accent" : "bg-ink-3"}`} /></div>
             <span className="num text-right text-ink">{r.s}</span>
           </motion.div>
         ))}
       </div>
-      <p className="mt-4 text-xs leading-relaxed text-ink-2">“Although Facility B is 23 km farther than Facility C, its higher conversion efficiency produces approximately <span className="text-accent">110 kWh</span> additional useful energy.”</p>
+      <p className="mt-4 text-xs leading-relaxed text-ink-2">Real Delhi plants, ranked from published capacity data. Sending this organic fraction to the Bhalswa landfill would recover <span className="text-accent">0 kWh</span>; Tehkhand WtE recovers about <span className="text-accent">829 kWh</span>.</p>
       <div className="mt-3 grid grid-cols-3 gap-2 border-t border-line pt-3 text-center text-[11px]">
-        <div><div className="text-ink-3">Predicted</div><div className="num text-ink">265 kWh</div></div>
-        <div><div className="text-ink-3">Actual</div><div className="num text-accent">264 kWh</div></div>
+        <div><div className="text-ink-3">Predicted</div><div className="num text-ink">829 kWh</div></div>
+        <div><div className="text-ink-3">Actual</div><div className="num text-accent">845 kWh</div></div>
         <div><div className="text-ink-3">Confidence</div><div className="num text-ink">≈ 80%</div></div>
       </div>
     </motion.div>

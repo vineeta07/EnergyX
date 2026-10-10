@@ -2,6 +2,26 @@
 
 Status legend: ✅ real data · 🟡 partly real · 🔴 simulated (demo seed)
 
+## Data status (Delhi)
+
+| Data | Status | Source |
+|---|---|---|
+| 12 MCD zones: wards, TPD, current disposal site | ✅ Real | DPCC/MCD MSW status presentation |
+| WtE plants: Okhla 1,950 TPD/23 MW, Tehkhand 2,000/25, Ghazipur 1,300/12, Narela-Bawana 2,400/24 | ✅ Real | DPCC/MCD, Renewable Watch 2026, Tehkhand inauguration report |
+| Landfills (Bhalswa, Ghazipur), MRFs (6, with TPD), Ghogha biomethanation (commissioning) | ✅ Real | DPCC/MCD, IAMRenew |
+| City composition: 40% biodegradable / 60% non-biodegradable | ✅ Real | DPCC/MCD |
+| Recyclables split (plastic/paper/metal) | 🟡 National average | Waste Management World (17.5% recyclables) |
+| Energy yield per kg | 🟡 Derived from real MW ÷ TPD | `realdata/delhi.ts` |
+| Biomethanation yield | 🟡 Indian plant reports (0.08–0.2 kWh_e/kg) | KrishiKosh thesis, vendor norms |
+| Coordinates | ✅ OpenStreetMap geocodes of plant localities | Nominatim |
+| Daily tonnage per zone, truck loads, meter readings, per-load composition | 🔴 Simulated around the real averages | No public Delhi source at this granularity |
+| Waste photos | ✅ Real pretrained model + real test sets | Hugging Face |
+
+**Current model results (held-out data):**
+- **Forecast:** MAPE 4.0% vs 4.5% naive.
+- **Energy:** residual model on facility historical yield, MAPE 6.0% vs 6.2% historical-yield baseline. The simulated meter noise (about 7%) sets the floor.
+- **Composition:** MAE 1.55 pp, calibrated confidence 86%. All zones are municipal, so the model learns the city average; photos add load-specific evidence.
+
 ## 0. Shared vocabulary
 
 **Waste streams.** The vision model already distinguishes 6 streams. The tabular and energy models still use 5, with glass and textile folded into `other`.
@@ -128,12 +148,11 @@ OR-Tools VRP. It needs **real fleet and road inputs**: vehicle capacities, depot
 
 ---
 
-## 3. What we need from the team
+## 3. What would replace the remaining simulated data
 
-Priority order:
-1. **Kaggle API token** (`kaggle.json`): to download the 15k-image dataset the vision model was trained on, so we can fine-tune M1 on Kaggle + TrashNet + O/R together. This is the biggest accuracy win available right now.
-2. **Our own photos** (50–200): real waste items or loads from a canteen, hostel or market, labelled by stream. These become the true test set, the most honest accuracy number we can show.
-3. **Any real generation data**: daily kg from even one canteen, hostel mess or restaurant for 4–8 weeks (CSV: `date, source, kg, waste_type`). Without it, M3 stays on simulated data.
-4. **Real facility list for the demo city**: name, location, technology, capacity (a few biogas plants and an MRF are enough).
-5. **Decision:** keep 5 streams for the hackathon, or promote `glass` and `textile` now (§0).
-6. **Optional:** an energy dataset or plant report you trust for M4 calibration. Otherwise I use published BMP values.
+The vision model stays as published (no fine-tuning). The remaining simulated pieces can only be replaced with data that is not public today:
+
+1. **Daily tonnage per zone or ward:** MCD logs weighbridge entries at every WtE plant and landfill. An RTI request to MCD (or the GPS/E-Samiksha vehicle logs DPCC mentions) would give real daily history for the forecast model.
+2. **Plant-level daily generation (MWh/day):** published in plant compliance reports and DERC tariff filings. This would replace the simulated meter readings for the energy model.
+3. **Transfer-station (FCTS) locations:** would replace the 3 demo hubs with real ones.
+4. **Zone-level composition audits:** any characterisation study per zone would make the composition model zone-specific instead of city-average.

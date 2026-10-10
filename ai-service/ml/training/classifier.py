@@ -46,7 +46,10 @@ def train(raw: pd.DataFrame) -> tuple[dict, dict]:
     per_stream = {s: float(np.mean(np.abs(pred[:, i] - yt[:, i]))) for i, s in enumerate(STREAMS)}
     dom_true = np.array(STREAMS)[yt[:, :5].argmax(1)]
     dom_pred = np.array(STREAMS)[pred[:, :5].argmax(1)]
+    # Calibration: share of held-out loads whose composition was within 6 pp on every stream.
+    within = float(np.mean(np.abs(pred[:, :5] - yt[:, :5]).max(1) <= 0.06))
     metrics = {
+        "within_6pp_share": within,
         "mae": float(np.mean(list(per_stream.values()))), "mae_per_stream": per_stream,
         "moisture_mae_pp": float(np.mean(np.abs(pred[:, 5] - yt[:, 5])) * 100),
         **classification(dom_true, dom_pred),
@@ -56,8 +59,8 @@ def train(raw: pd.DataFrame) -> tuple[dict, dict]:
     # Calibrate the ensemble-agreement confidence threshold on the held-out set.
     final = RandomForestRegressor(**PARAMS)
     final.fit(X, Y, sample_weight=w)
-    obj = {"model": final, "features": CLASSIFIER_FEATURES, "targets": TARGETS}
-    meta = {"algorithm": "Random-forest multi-output composition model (tabular; vision model not deployed)", "dataset_size": int(n),
+    obj = {"model": final, "features": CLASSIFIER_FEATURES, "targets": TARGETS, "calibrated_confidence": within}
+    meta = {"algorithm": "Random-forest multi-output composition prior (tabular; photos update it via the vision model)", "dataset_size": int(n),
             "metrics": metrics, "params": PARAMS, "log": log}
     return obj, meta
 
@@ -76,5 +79,6 @@ def predict(obj: dict, X: pd.DataFrame) -> dict:
         "composition": {s: float(round(comp[i], 4)) for i, s in enumerate(STREAMS)},
         "uncertainty": {s: float(round(std[i], 4)) for i, s in enumerate(STREAMS)},
         "moisture_pct": float(round(mean[5] * 100, 1)),
-        "confidence": float(round(min(0.995, agree), 4)),
+        # Ensemble agreement alone is overconfident when inputs barely vary; cap it at the held-out hit rate.
+        "confidence": float(round(min(0.995, agree, obj.get("calibrated_confidence", 1.0)), 4)),
     }

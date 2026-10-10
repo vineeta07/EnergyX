@@ -22,7 +22,11 @@ export function SourceDetail({ id }: { id: string }) {
   return (
     <div className="space-y-5">
       <PageHeader crumb={<Link href="/waste-sources">Waste Network</Link>} title={<span className="flex items-center gap-3">{s.name} <Status s={s.status} />{s.is_simulated && <SimTag />}</span>}
-        subtitle={`${BUSINESS_LABEL[s.business_type]} · ${s.waste_type.replace(/_/g, " ")} · ${s.address ?? s.city} · ${s.operating_hours ?? ""}`}
+        subtitle={<>
+          {BUSINESS_LABEL[s.business_type]} · {s.waste_type.replace(/_/g, " ")} · {s.address ?? s.city}{s.wards ? ` · ${s.wards} wards` : ""}
+          {s.current_disposal && <span className="mt-1 block text-xs text-ink-3">Today this zone&apos;s waste goes to: <span className="text-ink-2">{s.current_disposal}</span> (MCD/DPCC). Daily history below is simulated around the published average.</span>}
+          {s.data_source && <a href={s.data_source} target="_blank" rel="noreferrer" className="mt-1 inline-block text-xs text-cyan hover:underline">Source of published figures ↗</a>}
+        </>}
         actions={(role === "generator" || role === "admin" || role === "fleet") && <Button variant="primary" onClick={() => setReq(true)}><Truck className="size-4" />Request Pickup</Button>} />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">

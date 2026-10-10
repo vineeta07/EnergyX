@@ -26,7 +26,7 @@ export default function Facilities() {
                 <div><div className="text-sm font-semibold text-ink">{f.label} <span className="font-normal text-ink-3">· {f.code}</span></div><div className="text-xs text-ink-2">{f.name}</div></div>
                 <div className="flex items-center gap-1.5">{f.is_simulated && <SimTag />}<Status s={f.status} /></div>
               </div>
-              <div className="mt-2 text-xs text-cyan">{TECH_LABEL[f.technology]}</div>
+              <div className="mt-2 text-xs text-cyan">{TECH_LABEL[f.technology]}{f.mw ? ` · ${f.mw} MW` : ""}</div>
               <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
                 <div><div className="text-ink-3">Capacity</div><div className="num text-ink">{f.capacity_tpd} t/d</div></div>
                 <div><div className="text-ink-3">Efficiency</div><div className="num text-ink">{pct(f.efficiency_pct)}</div></div>

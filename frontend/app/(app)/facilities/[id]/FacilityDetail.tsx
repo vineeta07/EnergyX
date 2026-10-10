@@ -24,7 +24,11 @@ export function FacilityDetail({ id }: { id: string }) {
   return (
     <div className="space-y-5">
       <PageHeader crumb={<Link href="/facilities">Facilities</Link>} title={<span className="flex items-center gap-3">{f.label} — {f.name}<Status s={f.status} />{f.simulated_meter && <SimTag label="SIMULATED METER" />}</span>}
-        subtitle={`${TECH_LABEL[f.technology]} · ${f.lat.toFixed(4)}, ${f.lng.toFixed(4)} · gate fee ₹${n(f.gate_fee_inr_per_t)}/t`}
+        subtitle={<>
+          {TECH_LABEL[f.technology]}{f.mw ? ` · ${f.mw} MW` : ""} · {n(f.capacity_tpd)} TPD · {f.lat.toFixed(4)}, {f.lng.toFixed(4)}
+          {f.notes && <span className="mt-1 block text-xs text-ink-3">{f.notes}</span>}
+          {f.data_source && <a href={f.data_source} target="_blank" rel="noreferrer" className="mt-1 inline-block text-xs text-cyan hover:underline">Source of published figures ↗</a>}
+        </>}
         actions={mine && <Select className="w-40" value={f.status} onChange={(e) => patch.mutate({ status: e.target.value })}><option value="online">Online</option><option value="maintenance">Maintenance</option><option value="offline">Offline</option></Select>} />
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
         <Kpi label="Technology" value={<span className="text-base">{TECH_LABEL[f.technology]}</span>} />

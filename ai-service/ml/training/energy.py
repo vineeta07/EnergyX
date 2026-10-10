@@ -43,7 +43,7 @@ def _gain(model) -> dict:
 def train(raw: pd.DataFrame) -> tuple[dict, dict]:
     log: dict = {}
     df, log["validation"] = validate("energy", raw)
-    df = df[df["technology"] != "material_recovery"].copy()
+    df = df[~df["technology"].isin(["material_recovery", "landfill"])].copy()
     df["recorded_at"] = pd.to_datetime(df["recorded_at"], utc=True)
     df["moisture_pct"] = pd.to_numeric(df["moisture_pct"], errors="coerce")
     miss = int(df["moisture_pct"].isna().sum())
@@ -58,8 +58,14 @@ def train(raw: pd.DataFrame) -> tuple[dict, dict]:
     keep = ~(z.abs() > 6).fillna(False)
     log["cleaning"]["yield_outliers_excluded"] = int((~keep).sum())
     df = df[keep].reset_index(drop=True)
+    # Residual learning: the model predicts log(yield / facility historical yield), i.e. how this batch deviates
+    # from what the plant usually achieves (moisture, load, season, stream mix). Rows without any prior history are dropped.
+    no_hist = df["hist_yield"] <= 0
+    log["cleaning"]["rows_without_history_dropped"] = int(no_hist.sum())
+    df = df[~no_hist].reset_index(drop=True)
     X = energy_frame(df)
-    y = df["yield"].to_numpy()
+    y = np.log(df["yield"].clip(lower=1e-6) / df["hist_yield"]).to_numpy()
+    hist = df["hist_yield"].to_numpy()
     n = len(df)
     a, b = int(n * 0.7), int(n * 0.8)
     log["split"] = {"train": a, "validation": b - a, "test": n - b, "strategy": "time-ordered 70/10/20", "live_feedback_rows": int(df["is_live_feedback"].sum())}
@@ -67,18 +73,20 @@ def train(raw: pd.DataFrame) -> tuple[dict, dict]:
     model = _fit(_make(PARAMS["n_estimators"]), X.iloc[:a], y[:a], X.iloc[a:b], y[a:b])
     best = _best_iter(model)
 
-    val_pred = model.predict(X.iloc[a:b])
-    rel = (y[a:b] - val_pred) / np.maximum(val_pred, 1e-6)
+    val_pred = hist[a:b] * np.exp(model.predict(X.iloc[a:b]))
+    val_true = hist[a:b] * np.exp(y[a:b])
+    rel = (val_true - val_pred) / np.maximum(val_pred, 1e-6)
     sigma = {}
     for s in df["stream"].unique():
         m = (df["stream"].iloc[a:b] == s).to_numpy()
         sigma[s] = float(np.std(rel[m])) if m.sum() >= 5 else float(np.std(rel))
     sigma["_default"] = float(np.std(rel))
 
-    test_pred_kwh = model.predict(X.iloc[b:]) * df["input_kg"].iloc[b:].to_numpy()
+    test_yield = hist[b:] * np.exp(model.predict(X.iloc[b:]))
+    test_pred_kwh = test_yield * df["input_kg"].iloc[b:].to_numpy()
     test_true = df["actual_kwh"].iloc[b:].to_numpy()
     metrics = regression(test_true, test_pred_kwh)
-    metrics["yield_mae_kwh_per_kg"] = float(np.mean(np.abs(model.predict(X.iloc[b:]) - y[b:])))
+    metrics["yield_mae_kwh_per_kg"] = float(np.mean(np.abs(test_yield - df["yield"].iloc[b:].to_numpy())))
     # Naive baseline: facility historical yield x kg
     metrics["baseline_mape_hist_yield"] = regression(test_true, df["hist_yield"].iloc[b:].to_numpy() * df["input_kg"].iloc[b:].to_numpy())["mape"]
     backtest = []
@@ -94,10 +102,10 @@ def train(raw: pd.DataFrame) -> tuple[dict, dict]:
     by_feat = {f: gain.get(f, 0.0) / tot for f in ENERGY_FEATURES}
     groups = {g_: float(sum(by_feat[f] for f in fs)) for g_, fs in FEATURE_GROUPS.items()}
     # Global yield stats (for pathway estimates at network-average facilities)
-    obj = {"model": final, "features": ENERGY_FEATURES, "sigma": sigma, "group_importance": groups,
+    obj = {"model": final, "features": ENERGY_FEATURES, "sigma": sigma, "group_importance": groups, "target": "log_ratio_to_hist_yield",
            "stream_tech_yield": df.groupby(["stream", "technology"])["yield"].mean().to_dict(),
            "tech_profile": df.groupby("technology")[["efficiency_pct", "compatibility_pct", "utilization_pct", "capacity_tpd"]].mean().to_dict("index")}
-    meta = {"algorithm": "LightGBM regressor (yield kWh/kg)", "dataset_size": int(n), "metrics": metrics,
+    meta = {"algorithm": "LightGBM residual model (log yield ÷ facility historical yield)", "dataset_size": int(n), "metrics": metrics,
             "params": {**PARAMS, "n_estimators": best}, "feature_importance": groups, "sigma": sigma, "log": log}
     return obj, meta, backtest
 

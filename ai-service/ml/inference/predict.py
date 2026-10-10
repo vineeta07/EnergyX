@@ -119,17 +119,18 @@ def classify(total_kg: float, month: int, source_mix: list[dict], images: list[b
 
 
 # ------------------------------------------------------------------ energy
-CHP = {"biogas_kwh_per_m3": 6.0, "electrical_eff": 0.38, "useful_eff": 0.80}
+# Predicted energy is ELECTRICITY (kWh_e), the quantity Delhi's plants report (MW).
+# Biogas: ~6 kWh/m³ (60% CH4) and ~33% gas-engine efficiency -> ~2 kWh_e per m³; recoverable heat ~45%.
+CHP = {"biogas_kwh_per_m3": 6.0, "electrical_eff": 0.33, "heat_eff": 0.45}
 
 
 def _energy_split(technology: str, kwh: float) -> dict:
-    """Engineering conversion of predicted useful energy into biogas / electricity / heat (documented factors)."""
-    if technology in ("anaerobic_digestion", "landfill_gas"):
-        biogas = kwh / (CHP["biogas_kwh_per_m3"] * CHP["useful_eff"])
-        elec = biogas * CHP["biogas_kwh_per_m3"] * CHP["electrical_eff"]
-        return {"biogas_m3": round(biogas, 1), "electricity_kwh": round(elec, 1), "heat_kwh": round(kwh - elec, 1)}
-    if technology in ("combustion", "rdf_coprocessing", "pyrolysis"):
-        return {"biogas_m3": None, "electricity_kwh": round(kwh * 0.45, 1), "heat_kwh": round(kwh * 0.55, 1)}
+    """Engineering conversion of predicted electricity into biogas volume / recoverable heat (documented factors)."""
+    if technology == "anaerobic_digestion":
+        biogas = kwh / (CHP["biogas_kwh_per_m3"] * CHP["electrical_eff"])
+        return {"biogas_m3": round(biogas, 1), "electricity_kwh": round(kwh, 1), "heat_kwh": round(biogas * CHP["biogas_kwh_per_m3"] * CHP["heat_eff"], 1)}
+    if technology == "combustion":
+        return {"biogas_m3": None, "electricity_kwh": round(kwh, 1), "heat_kwh": 0.0}  # Delhi WtE plants are power-only
     return {"biogas_m3": None, "electricity_kwh": 0.0, "heat_kwh": 0.0}
 
 
@@ -140,7 +141,11 @@ def predict_facility(stream: str, kg: float, moisture_pct: float, month: int, f:
     if hist is None:
         hist = obj["stream_tech_yield"].get((stream, f["technology"]), 0.0)
     row = energy_row(stream, f["technology"], f["efficiency_pct"], f["compatibility_pct"], f["utilization_pct"], f["capacity_tpd"], moisture_pct, kg, month, hist)
-    yld = max(0.0, float(obj["model"].predict(pd.DataFrame([row], columns=obj["features"]))[0]))
+    raw = float(obj["model"].predict(pd.DataFrame([row], columns=obj["features"]))[0])
+    if obj.get("target") == "log_ratio_to_hist_yield":
+        yld = hist * float(np.exp(raw)) if hist > 0 else 0.0
+    else:
+        yld = max(0.0, raw)
     kwh = yld * kg
     sg = obj["sigma"].get(stream, obj["sigma"]["_default"])
     if not f.get("n_history"):
@@ -149,15 +154,17 @@ def predict_facility(stream: str, kg: float, moisture_pct: float, month: int, f:
             "sigma_rel": sg, "confidence": round(energy_confidence(sg), 4), **_energy_split(f["technology"], kwh)}
 
 
+# Pathways that exist in Delhi's real network (WtE, biomethanation, MRF, sanitary landfill).
 PATHWAYS = {
-    "organic": ["anaerobic_digestion", "combustion", "landfill_gas"],
-    "plastic": ["rdf_coprocessing", "pyrolysis", "combustion"],
-    "paper": ["material_recovery", "combustion"],
+    "organic": ["anaerobic_digestion", "combustion", "landfill"],
+    "plastic": ["combustion", "material_recovery", "landfill"],
+    "paper": ["material_recovery", "combustion", "landfill"],
     "metal": ["material_recovery"],
-    "other": ["combustion", "landfill_gas"],
+    "other": ["combustion", "landfill"],
 }
-# Landfill gas capture is not a facility in this network: its yield comes from a literature factor, flagged as such.
-REFERENCE_YIELD = {("organic", "landfill_gas"): 0.145, ("other", "landfill_gas"): 0.05}
+# Used only when a technology has no metered history in our data (e.g. a plant still commissioning).
+# Biomethanation: Indian plant data 0.08–0.2 kWh_e per kg wet waste (Bangalore 8 t/day -> ~645 kWh/day; vendor norms).
+REFERENCE_YIELD = {("organic", "anaerobic_digestion"): 0.15}
 
 
 def pathways(stream: str, kg: float, moisture_pct: float, month: int, available: list[str]) -> dict:
@@ -168,15 +175,15 @@ def pathways(stream: str, kg: float, moisture_pct: float, month: int, available:
         if tech == "material_recovery":
             options.append({"technology": tech, "expected_kwh": 0.0, "available": tech in available, "basis": "material recovery (no energy generated; avoids virgin production)", "confidence": None, "interval": None, **_energy_split(tech, 0)})
             continue
-        if (stream, tech) in REFERENCE_YIELD and tech not in available:
-            k = REFERENCE_YIELD[(stream, tech)] * kg
-            options.append({"technology": tech, "expected_kwh": round(k, 1), "available": False, "basis": "literature reference factor (no facility in network)", "confidence": None, "interval": None, **_energy_split(tech, k)})
+        if tech == "landfill":
+            options.append({"technology": tech, "expected_kwh": 0.0, "available": tech in available, "basis": "sanitary landfill (no energy recovery in Delhi)", "confidence": None, "interval": None, **_energy_split(tech, 0)})
             continue
         prof = obj["tech_profile"].get(tech)
         if prof is None:
-            # Technology never observed: fall back to a conservative engineering factor and say so.
-            k = {"combustion": 0.30, "pyrolysis": 1.0}.get(tech, 0.2) * kg * (1 if stream == "plastic" else 0.8)
-            options.append({"technology": tech, "expected_kwh": round(k, 1), "available": tech in available, "basis": "engineering factor (no training data for this technology)", "confidence": None, "interval": None, **_energy_split(tech, k)})
+            if (stream, tech) not in REFERENCE_YIELD:
+                continue
+            k = REFERENCE_YIELD[(stream, tech)] * kg
+            options.append({"technology": tech, "expected_kwh": round(k, 1), "available": tech in available, "basis": "Indian plant reference yield (no metered history yet)", "confidence": None, "interval": None, **_energy_split(tech, k)})
             continue
         p = predict_facility(stream, kg, moisture_pct, month, {"technology": tech, **prof, "historical_yield_kwh_per_kg": obj["stream_tech_yield"].get((stream, tech)), "n_history": 1})
         options.append({"technology": tech, "expected_kwh": p["predicted_kwh"], "available": tech in available, "basis": "ML model @ network-average facility", "confidence": p["confidence"], "interval": p["interval"],
@@ -185,7 +192,7 @@ def pathways(stream: str, kg: float, moisture_pct: float, month: int, available:
     rec = next((o for o in options if o["available"]), options[0] if options else None)
     if rec is None:
         return {"stream": stream, "kg": kg, "options": [], "recommended": None, "reason": "No pathway", "model_version": e["version"]}
-    if stream in ("paper", "metal"):
+    if rec["technology"] == "material_recovery":
         reason = "Material recovery retains more embodied energy than combustion for this stream."
     else:
         alt = next((o for o in options if o is not rec and o["expected_kwh"] > 0), None)

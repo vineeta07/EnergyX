@@ -367,3 +367,11 @@ CREATE TABLE IF NOT EXISTS system_settings (
 
 -- v2: per-photo vision results (sample audit) on classifications
 ALTER TABLE waste_classifications ADD COLUMN IF NOT EXISTS vision JSONB;
+
+-- v3: provenance for real-data rows (Delhi MCD / DPCC sources)
+ALTER TABLE waste_sources ADD COLUMN IF NOT EXISTS wards INT;
+ALTER TABLE waste_sources ADD COLUMN IF NOT EXISTS current_disposal TEXT;
+ALTER TABLE waste_sources ADD COLUMN IF NOT EXISTS data_source TEXT;
+ALTER TABLE facilities ADD COLUMN IF NOT EXISTS mw DOUBLE PRECISION;
+ALTER TABLE facilities ADD COLUMN IF NOT EXISTS notes TEXT;
+ALTER TABLE facilities ADD COLUMN IF NOT EXISTS data_source TEXT;

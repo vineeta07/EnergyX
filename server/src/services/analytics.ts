@@ -56,7 +56,7 @@ export async function flow(days = 30) {
        WHERE o.recorded_at > now() - ($1 || ' days')::interval GROUP BY o.stream, f.technology`, [days]);
     const typeLabel: Record<string, string> = { restaurant: "Restaurants", hotel: "Hotels", market: "Markets", food_processing: "Food processing", agriculture: "Agriculture", manufacturing: "Manufacturing", municipal: "Municipal" };
     const streamLabel: Record<string, string> = { organic: "Organic", plastic: "Plastic", paper: "Paper", metal: "Metal", other: "Other" };
-    const techLabel: Record<string, string> = { anaerobic_digestion: "Anaerobic digestion", combustion: "Biomass combustion", rdf_coprocessing: "RDF co-processing", pyrolysis: "Pyrolysis", landfill_gas: "Landfill gas", material_recovery: "Material recovery" };
+    const techLabel: Record<string, string> = { anaerobic_digestion: "Biomethanation", combustion: "Waste-to-Energy", landfill: "Sanitary landfill", rdf_coprocessing: "RDF co-processing", pyrolysis: "Pyrolysis", landfill_gas: "Landfill gas", material_recovery: "Material recovery" };
     const links = new Map<string, number>();
     const add = (a: string, b: string, v: number) => { if (v > 0.5) links.set(`${a}→${b}`, (links.get(`${a}→${b}`) ?? 0) + v); };
     const streamTotals: Record<string, number> = {};

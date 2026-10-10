@@ -6,7 +6,7 @@ import pandas as pd
 
 BUSINESS_TYPES = ["restaurant", "hotel", "market", "food_processing", "agriculture", "manufacturing", "municipal"]
 STREAMS = ["organic", "plastic", "paper", "metal", "other"]
-TECHNOLOGIES = ["anaerobic_digestion", "combustion", "landfill_gas", "rdf_coprocessing", "pyrolysis", "material_recovery"]
+TECHNOLOGIES = ["anaerobic_digestion", "combustion", "landfill", "material_recovery"]
 
 
 def month_cyc(m) -> tuple:

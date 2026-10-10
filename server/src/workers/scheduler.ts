@@ -67,7 +67,7 @@ async function overdueSweep() {
 }
 
 async function capacitySweep() {
-  const hot = await query<any>(`SELECT f.* FROM facilities f WHERE f.utilization_pct >= 85 AND NOT EXISTS (SELECT 1 FROM alerts a WHERE a.type='facility_capacity' AND a.entity_id=f.id AND a.status<>'resolved')`);
+  const hot = await query<any>(`SELECT f.* FROM facilities f WHERE f.utilization_pct >= 95 AND f.technology <> 'landfill' AND NOT EXISTS (SELECT 1 FROM alerts a WHERE a.type='facility_capacity' AND a.entity_id=f.id AND a.status<>'resolved')`);
   for (const f of hot) await raiseAlert({ severity: "warning", type: "facility_capacity", title: "Facility nearing capacity", message: `${f.label} is at ${f.utilization_pct}% utilization.`, entity_type: "facility", entity_id: f.id });
 }
 
@@ -80,7 +80,7 @@ async function fillLevelDiscovery() {
     const days = s.last ? (Date.now() - new Date(s.last).getTime()) / 86_400_000 : 1;
     const est = s.avg_daily_kg * days;
     if (est >= 0.85 * (s.storage_capacity_kg ?? s.avg_daily_kg * 1.6)) {
-      await P.createPickup({ source_id: s.id, quantity_kg: Math.round(Math.min(est, s.storage_capacity_kg ?? est)), urgency: "normal", notes: "Auto-requested: storage estimated ≥85% full" });
+      await P.createPickup({ source_id: s.id, quantity_kg: Math.round(Math.min(est, s.storage_capacity_kg ?? est, 6000)), urgency: "normal", notes: "Auto-requested: storage estimated ≥85% full (one transfer load)" });
       break; // one per sweep keeps the board readable
     }
   }

@@ -1,5 +1,7 @@
 # WattCycle — Detailed User & System Guide
 
+> **Data note.** The network is real Delhi: 12 MCD zones, 4 WtE plants, 2 landfills, 6 MRFs and 1 biomethanation plant, all from DPCC/MCD and published reports. Day-to-day operations (daily tonnage, truck loads, meter readings) are simulated around those published averages. Some examples below still use the older demo names (Restaurant ABC, Facility A/B/C). The flows and functions are identical; only the data changed.
+
 This guide follows every user from login to logout. For each screen and button it covers:
 - what the user sees and does;
 - which API call the button makes;
@@ -354,17 +356,17 @@ Available to admin, hub and fleet. The button calls `POST /api/demo/run` → `wo
 
 | Stage | What runs (real functions) | Example narration |
 |---|---|---|
-| 0 Discover | `ai.forecast` for Restaurant ABC | "forecast 556 kg today, 3.98 t next 7 days" |
-| 1 Request | `createPickup` ×3: Restaurant ABC 500 kg, Hotel XYZ 400 kg, Food Market DEF 100 kg (urgency high) | "3 pickups requested" |
-| 2 Optimize | `optimizeCollection` on truck T-104 (or any idle truck at the hub) | "T-104: Hub → A → B → C → Hub (22 km, score 85)" |
-| 3 Collect | `startRoute` with a 600× simulation speed; the fleet simulator completes it → shipment; weight fixed at 1,000 kg for reproducibility | "WC-1027 arrived: 1,000 kg" |
-| 4 Classify | `classifyShipment` + `reviewClassification(confirm)` | "organic 634 kg, plastic 165 kg … confidence 87%" |
-| 5 Predict | `predictPathways` | "Organic → anaerobic digestion: N kWh" |
-| 6 Evaluate | `optimizeDestination` (ranking shown as bars) | "4 facilities evaluated" |
-| 7 Select | the decision's headline | "Facility B selected because …" |
-| 8 Dispatch | `approveDecision` for every decision; dispatch route started at 900× | "T-xxx dispatched: Hub → Facility B (35 km)" |
-| 9 Energy | `recordOutput({simulate:true})` for each prediction (seeded meter noise) | "265 kWh generated (simulated meter); predicted 236" |
-| 10 Feedback | the feedback rows created in stage 9 | "prediction error 12.4% — added to next retraining set" |
+| 0 Discover | `ai.forecast` for MCD Central Zone (real published average 1,000 TPD) | "MCD Central Zone (25 wards): forecast 1,037 t today" |
+| 1 Request | `createPickup` ×3: Central 4.0 t, South 3.5 t, West 2.5 t (urgency high) | "3 transfer loads requested" |
+| 2 Optimize | `optimizeCollection` on MTS truck T-104 (15 t) or any idle truck at the hub | "T-104: Okhla hub → zones → hub (53 km, 40% shorter than separate trips)" |
+| 3 Collect | `startRoute` with a 600× simulation speed; the fleet simulator completes it → shipment; weight fixed at 10,000 kg for reproducibility | "WC-1023 arrived at Okhla Transfer & Sorting Hub: 10,000 kg" |
+| 4 Classify | `classifyShipment` + `reviewClassification(confirm)` | "organic 4,230 kg, plastic 938 kg …" |
+| 5 Predict | `predictPathways` | "Organic → waste-to-energy (biomethanation not yet online)" |
+| 6 Evaluate | `optimizeDestination` (ranking shown as bars) | "7 facilities evaluated: Tehkhand, Okhla, Ghazipur, Bawana WtE, 2 landfills, Ghogha (excluded: commissioning)" |
+| 7 Select | the decision's headline | "Tehkhand WtE selected because it provides 6% higher predicted energy yield" |
+| 8 Dispatch | `approveDecision` for every decision; dispatch route started at 900× | "T-xxx dispatched: hub → Tehkhand WtE (1.5 km)" |
+| 9 Energy | `recordOutput({simulate:true})` for each prediction (meter simulated around Tehkhand's published 25 MW ÷ 2,000 TPD) | "845 kWh generated; predicted 829" |
+| 10 Feedback | the feedback rows created in stage 9 | "prediction error ~2% — added to next retraining set" |
 
 The overlay (`features/demo/DemoOverlay.tsx`) is driven entirely by `DemoStage` WebSocket events. At the end it shows predicted, actual and error, with links to the **decision**, the **shipment trace** and the **feedback loop**.
 

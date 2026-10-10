@@ -14,8 +14,9 @@ export const STREAM_LABEL: Record<string, string> = { organic: "Organic", plasti
 
 export const TECH_LABEL: Record<string, string> = {
   anaerobic_digestion: "Anaerobic Digestion",
-  combustion: "Biomass Combustion",
+  combustion: "Waste-to-Energy (incineration)",
   landfill_gas: "Landfill Gas",
+  landfill: "Sanitary Landfill",
   rdf_coprocessing: "RDF Co-processing",
   pyrolysis: "Pyrolysis",
   material_recovery: "Material Recovery",

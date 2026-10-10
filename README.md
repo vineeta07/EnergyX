@@ -188,7 +188,12 @@ Contracts **freeze at the start of phase 3**. After that, only fixes go in.
 - **Never commit generated state:** `server/data/`, model artifacts, snapshots, `.env`. These are already in `.gitignore`. Reset locally with `npx tsx src/database/seed.ts --reset`.
 
 ## Honesty notes
-- **Simulated data:** all network data is simulated and flagged `is_simulated`. The UI labels it "SIMULATED". The physical simulator is `server/src/database/simulator.ts`. The ML models never see its formulas; they only see the records it writes, exactly as they would see real meter data.
-- **No vision model:** there is no labelled waste-image dataset, so none is deployed. The classifier is tabular. Uploaded images are stored to start building one.
+- **Real Delhi data:** the network is built from published Delhi figures (`server/src/database/realdata/delhi.ts`):
+  - 12 MCD zones with wards, daily tonnage and current disposal site (DPCC/MCD);
+  - 4 WtE plants with real TPD and MW, 2 landfills, the commissioning Ghogha biomethanation plant, and 6 MRFs;
+  - 40% biodegradable city composition;
+  - OpenStreetMap coordinates.
+- **Simulated data (labelled):** day-to-day tonnage around each zone's published average, individual transfer loads, hubs, trucks, per-load composition variation and plant meter readings. Meter readings are calibrated so each plant averages its published MW ÷ TPD. No public Delhi source publishes these at that granularity. Every generated row is flagged `is_simulated`.
+- **Waste photos:** classified by the pretrained `Darshan764/waste-classification-v2` model. On independent real photos it scores 62–79% (79–91% when confident); see `docs/AI_SCHEMA.md`.
 - **Distances:** road distances are great-circle distance × 1.25 locally. Amazon Location Service replaces this in AWS mode.
 - **Emission factors:** 0.71 kg CO₂/kWh grid and 0.45 kg CO₂e/kg organic landfill. These are shown on `/impact`. Replace them with official factors for production.

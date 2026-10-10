@@ -10,10 +10,10 @@ import { Logo } from "@/components/shell/Logo";
 
 const DEMO = [
   { email: "admin@wattcycle.demo", role: "System Operator", d: "Whole network, AI decisions, models, admin", icon: ShieldCheck },
-  { email: "generator@wattcycle.demo", role: "Waste Generator", d: "Restaurant ABC — register waste, request pickups", icon: Factory },
+  { email: "generator@wattcycle.demo", role: "Waste Generator", d: "MCD Central & South zone office — forecasts, transfer-load requests", icon: Factory },
   { email: "fleet@wattcycle.demo", role: "Fleet Operator", d: "Pickup board, OR-Tools routes, vehicles", icon: Truck },
   { email: "hub@wattcycle.demo", role: "Hub Operator", d: "Weigh, classify, approve destinations", icon: Warehouse },
-  { email: "facility@wattcycle.demo", role: "Energy Facility", d: "Facility B — incoming loads, report output", icon: Zap },
+  { email: "facility@wattcycle.demo", role: "Energy Facility", d: "Tehkhand WtE plant — incoming loads, report output", icon: Zap },
 ];
 
 export default function Login() {

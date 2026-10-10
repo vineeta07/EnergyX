@@ -27,11 +27,13 @@ export const DEMO_STAGES = [
   { key: "feedback", label: "Feedback recorded" },
 ] as const;
 
+// Hero scenario: one MTS truck consolidates transfer loads from three real MCD zones near the Okhla hub.
 const HERO = [
-  { name: "Restaurant ABC", kg: 500 },
-  { name: "Hotel XYZ", kg: 400 },
-  { name: "Food Market DEF", kg: 100 },
+  { name: "MCD Central Zone", kg: 4000 },
+  { name: "MCD South Zone", kg: 3500 },
+  { name: "MCD West Zone", kg: 2500 },
 ];
+const HERO_KG = HERO.reduce((a, h) => a + h.kg, 0);
 
 interface DemoRun { id: number; status: "running" | "completed" | "failed"; stage: number; started_at: string; results: Record<string, any>; error?: string }
 let current: DemoRun | null = null;
@@ -74,12 +76,12 @@ export async function runDemo(user: AuthUser) {
 
 async function execute(run: DemoRun, user: AuthUser) {
   const sources = await query<any>("SELECT * FROM waste_sources WHERE name = ANY($1::text[])", [HERO.map((h) => h.name)]);
-  const abc = sources.find((s) => s.name === "Restaurant ABC");
+  const abc = sources.find((s) => s.name === HERO[0].name);
 
   // 1. DISCOVER — forecast for the restaurant cluster
   const history = await query<any>("SELECT to_char(record_date,'YYYY-MM-DD') AS date, SUM(quantity_kg) AS kg FROM waste_records WHERE source_id=$1 AND record_date > now()::date - 90 GROUP BY record_date ORDER BY record_date", [abc.id]);
   const forecast = await ai.forecast({ source: { id: abc.id, business_type: abc.business_type, waste_type: abc.waste_type, avg_daily_kg: abc.avg_daily_kg }, history, horizon: 7 });
-  await stage(run, 0, `Restaurant cluster discovered — Restaurant ABC forecast ${round(forecast.forecast[0].kg, 0)} kg today, ${round(forecast.total_kg / 1000, 2)} t next 7 days`, { forecast, sources: sources.map((s) => ({ id: s.id, name: s.name, lat: s.lat, lng: s.lng })) });
+  await stage(run, 0, `${abc.name} (${abc.wards} wards): forecast ${round(forecast.forecast[0].kg / 1000, 0)} t today, ${round(forecast.total_kg / 1000, 0)} t over the next 7 days`, { forecast, sources: sources.map((s) => ({ id: s.id, name: s.name, lat: s.lat, lng: s.lng })) });
   await sleep(2200);
 
   // 2. REQUEST — three pickups
@@ -88,13 +90,13 @@ async function execute(run: DemoRun, user: AuthUser) {
     const s = sources.find((x) => x.name === h.name);
     pickups.push(await P.createPickup({ source_id: s.id, quantity_kg: h.kg, urgency: "high", notes: "Demo hero scenario" }, user));
   }
-  await stage(run, 1, `3 pickups requested: ${HERO.map((h) => `${h.name} ${h.kg} kg`).join(", ")}`, { pickups: pickups.map((p) => ({ id: p.id, code: p.code, source: p.source_name, kg: p.quantity_kg })) });
+  await stage(run, 1, `3 transfer loads requested: ${HERO.map((h) => `${h.name} ${(h.kg / 1000).toFixed(1)} t`).join(", ")}`, { pickups: pickups.map((p) => ({ id: p.id, code: p.code, source: p.source_name, kg: p.quantity_kg })) });
   await sleep(2000);
 
   // 3. OPTIMIZE — OR-Tools VRP on T-104 (or any idle truck at the hub)
   const hub = await P.nearestHub(abc);
   let truck = await one<any>("SELECT * FROM vehicles WHERE code='T-104' AND status='idle'");
-  truck ??= await one<any>("SELECT * FROM vehicles WHERE status='idle' AND capacity_kg >= 1000 ORDER BY (hub_id=$1) DESC LIMIT 1", [hub.id]);
+  truck ??= await one<any>("SELECT * FROM vehicles WHERE status='idle' AND capacity_kg >= $2 ORDER BY (hub_id=$1) DESC LIMIT 1", [hub.id, HERO_KG]);
   if (!truck) throw new Error("No idle vehicle available");
   const opt = await P.optimizeCollection({ hub_id: hub.id, pickup_ids: pickups.map((p) => p.id), vehicle_ids: [truck.id] });
   const route = opt.routes[0];
@@ -108,9 +110,9 @@ async function execute(run: DemoRun, user: AuthUser) {
   let sh = shipment;
   if (!sh) { sh = (await P.completeRoute(route.id, { exact_weight: true })).shipment; }
   // Hero demo uses the exact declared weight for reproducibility.
-  await update("shipments", sh.id, { measured_kg: 1000 });
+  await update("shipments", sh.id, { measured_kg: HERO_KG });
   sh = await one<any>("SELECT * FROM shipments WHERE id=$1", [sh.id]);
-  await stage(run, 3, `${sh.code} arrived at ${hub.name}: 1,000 kg on weighbridge`, { shipment: sh });
+  await stage(run, 3, `${sh.code} arrived at ${hub.name}: ${HERO_KG.toLocaleString("en-IN")} kg on weighbridge`, { shipment: sh });
   await sleep(1800);
 
   // 5. CLASSIFY + operator confirmation
@@ -122,7 +124,7 @@ async function execute(run: DemoRun, user: AuthUser) {
   // 6. PREDICT pathways
   const pathways = await P.predictPathways(sh.id);
   const organic = pathways.streams.find((s: any) => s.stream === "organic");
-  await stage(run, 5, `Organic ${round(organic.kg, 0)} kg → ${organic.recommended.replace(/_/g, " ")}: ${round(organic.options[0].expected_kwh, 0)} kWh expected`, { pathways });
+  await stage(run, 5, `Organic ${round(organic.kg, 0)} kg → ${organic.recommended.replace(/_/g, " ")}: ${round(organic.options.find((o: any) => o.technology === organic.recommended)?.expected_kwh ?? 0, 0)} kWh expected`, { pathways });
   await sleep(2400);
 
   // 7+8. EVALUATE facilities, SELECT destination

@@ -9,7 +9,7 @@ import { cx } from "@/lib/format";
 type Msg = { role: "user" | "assistant"; content: string; tools?: { name: string; input: any }[]; engine?: string; notice?: string };
 
 const SUGGESTIONS = [
-  "Why did the AI select Facility B?",
+  "Why did the AI select Tehkhand WtE?",
   "How much energy did organic waste generate this month?",
   "Which waste source should we prioritize today?",
   "Why is this route inefficient?",

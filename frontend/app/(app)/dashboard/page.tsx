@@ -24,7 +24,7 @@ export default function Dashboard() {
   return (
     <div className="space-y-5">
       <PageHeader
-        title={<span className="flex items-center gap-3">Network Overview <SimTag label="DEMO NETWORK" /></span>}
+        title={<span className="flex items-center gap-3">Network Overview <SimTag label="REAL DELHI ZONES &amp; PLANTS · SIMULATED DAILY OPS" /></span>}
         subtitle="Discover → Collect → Characterize → Optimize → Route → Convert → Measure → Learn. Live state of the whole loop."
       />
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">

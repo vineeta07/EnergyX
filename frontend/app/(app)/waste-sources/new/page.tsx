@@ -43,7 +43,7 @@ export default function NewSource() {
       <div className="grid gap-5 xl:grid-cols-[1fr_380px]">
         <Panel title="Source profile">
           <form className="grid gap-4 md:grid-cols-2" onSubmit={(e) => { e.preventDefault(); save.mutate(); }}>
-            <Field label="Business name"><Input required minLength={2} value={f.name} onChange={set("name")} placeholder="Restaurant ABC" /></Field>
+            <Field label="Business name"><Input required minLength={2} value={f.name} onChange={set("name")} placeholder="Lajpat Nagar Market Association" /></Field>
             <Field label="Business type"><Select value={f.business_type} onChange={set("business_type")}>{Object.entries(BUSINESS_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</Select></Field>
             <Field label="Address"><Input value={f.address} onChange={set("address")} placeholder="Lajpat Nagar II, New Delhi" /></Field>
             <Field label="City"><Select value={f.city} onChange={set("city")}><option>Delhi</option><option>Gurugram</option><option>Noida</option></Select></Field>

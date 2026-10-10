@@ -62,7 +62,7 @@ def rank(stream: str, kg: float, moisture_pct: float, month: int, facilities: li
     cands = []
     for f in facilities:
         reason = _eligibility(f, kg, moisture_pct)
-        p = predict_facility(stream, kg, moisture_pct, month, f) if f["technology"] != "material_recovery" else {"predicted_kwh": 0.0, "interval": [0, 0], "confidence": None, "sigma_rel": 0}
+        p = predict_facility(stream, kg, moisture_pct, month, f) if f["technology"] not in ("material_recovery", "landfill") else {"predicted_kwh": 0.0, "interval": [0, 0], "confidence": None, "sigma_rel": 0}
         cands.append({**{k: f[k] for k in ("id", "code", "label", "name", "technology", "lat", "lng", "efficiency_pct", "utilization_pct", "capacity_tpd", "compatibility_pct",
                                          "distance_km", "transport_cost_inr", "transport_co2_kg", "historical_yield_kwh_per_kg", "n_history")},
                       "facility_id": f["id"], **p, "eligible": reason is None, "exclusion_reason": reason})

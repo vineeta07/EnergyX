@@ -16,14 +16,15 @@ import { getSetting, nextCode } from "./settings.ts";
 import { HttpError, notFound } from "../middleware/http.ts";
 import type { AuthUser } from "../middleware/auth.ts";
 import { roadKm, transportCost, transportCo2, round, ROAD_FACTOR, AVG_SPEED_KMH, DIESEL_KG_CO2_PER_L, DIESEL_INR_PER_L } from "../utils/geo.ts";
-import { simulateEnergy, rng, STREAMS, type Stream } from "../database/simulator.ts";
+import { simulateEnergy, rng, STREAMS, POTENTIAL_KWH_PER_KG, type Stream, type Technology } from "../database/simulator.ts";
 import fs from "node:fs";
 import path from "node:path";
 import { config } from "../config.ts";
 import { DEFAULT_WEIGHTS } from "../database/seed.ts";
 
 const STREAM_LABEL: Record<string, string> = { organic: "Organic", plastic: "Plastic", paper: "Paper", metal: "Metal", other: "Other / residual" };
-const ENERGY_STREAMS: Stream[] = ["organic", "plastic"];
+// In Delhi, organic, plastic, paper and residual all go to WtE today, so each is ranked across WtE / biomethanation / MRF / landfill.
+const ENERGY_STREAMS: Stream[] = ["organic", "plastic", "paper", "other"];
 
 /** Per-stream moisture after hub sorting: wet organics concentrate moisture; dry fractions
  *  carry only surface moisture (~quarter of the load average, 5–30%). */
@@ -40,7 +41,7 @@ export async function createPickup(input: { source_id: number; quantity_kg: numb
   const hub = await nearestHub(src);
   const km = roadKm(src, hub) * 2;
   // Marginal cost when consolidated into a shared route (share of a 2.5 t truck)
-  const share = Math.min(1, input.quantity_kg / 2500);
+  const share = Math.min(1, input.quantity_kg / 9000); // share of a typical 9 t hook-loader trip
   const pickup = await insert<any>("pickup_requests", {
     code: await nextCode("pickup_requests", "PU", 2000),
     source_id: src.id, requested_by: user?.id ?? null, quantity_kg: input.quantity_kg, waste_type: src.waste_type,
@@ -436,7 +437,8 @@ export async function recordOutput(input: { prediction_id?: number; facility_id?
     actual = simulateEnergy({ stream, technology: fac.technology, kg, moisture: moisture / 100, sim: fac.sim_params, utilization: fac.utilization_pct / 100, r: rng(input.seed ?? Date.now()) });
     source = "meter-sim";
   }
-  const potential = kg * ({ organic: 0.5, plastic: 1.9, paper: 0.9, other: 0.35, metal: 0 } as Record<string, number>)[stream];
+  // Efficiency = actual ÷ energy content available to this technology (LHV for WtE, kWh_e potential for AD).
+  const potential = kg * (POTENTIAL_KWH_PER_KG[stream]?.[fac.technology as Technology] ?? 0);
   const out = await insert<any>("energy_outputs", {
     facility_id: fac.id, prediction_id: pred?.id ?? null, shipment_id: sh?.id ?? null, stream, input_kg: kg, moisture_pct: moisture,
     actual_kwh: round(actual, 1), efficiency_pct: potential ? round((100 * actual) / potential, 1) : null, source, is_simulated: source === "meter-sim",

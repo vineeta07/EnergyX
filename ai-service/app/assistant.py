@@ -19,8 +19,8 @@ from app.config import ASSISTANT_MODEL, BACKEND_URL, SERVICE_KEY
 TOOLS = [
     {"name": "get_kpis", "description": "Network KPIs: waste available/collected/in processing, energy today/7d/30d, CO2 avoided (30d), active routes, prediction accuracy, open alerts.",
      "input_schema": {"type": "object", "properties": {}, "additionalProperties": False}},
-    {"name": "get_facility_decisions", "description": "Most recent explainable AI facility-selection decisions (inputs, ranking of all facilities with scores, explanation, weights). Optionally filter by chosen facility label, e.g. 'B'.",
-     "input_schema": {"type": "object", "properties": {"facility": {"type": "string", "description": "Facility letter or code, e.g. 'B' or 'FAC-B'"}}, "additionalProperties": False}},
+    {"name": "get_facility_decisions", "description": "Most recent explainable AI facility-selection decisions (inputs, ranking of all facilities with scores, explanation, weights). Optionally filter by chosen facility name, e.g. 'Tehkhand'.",
+     "input_schema": {"type": "object", "properties": {"facility": {"type": "string", "description": "Facility name fragment or code, e.g. 'Tehkhand' or 'WTE-TKD'"}}, "additionalProperties": False}},
     {"name": "get_energy_generation", "description": "Energy generated (kWh) and input waste (kg) grouped by stream and facility over a period.",
      "input_schema": {"type": "object", "properties": {"days": {"type": "integer", "minimum": 1, "maximum": 365}, "stream": {"type": "string", "enum": ["organic", "plastic", "paper", "other"]}}, "additionalProperties": False}},
     {"name": "get_co2_avoided", "description": "CO2 avoided over a period: grid displacement + landfill methane avoided − transport emissions, with emission factors.",
@@ -57,9 +57,9 @@ def call_tool(name: str, args: dict):
     return r.json()
 
 
-SYSTEM = """You are WattCycle Intelligence, the operations assistant for a waste-to-energy optimisation network in Delhi NCR.
+SYSTEM = """You are WattCycle Intelligence, the operations assistant for a waste-to-energy optimisation network in Delhi (real MCD zones and real Delhi facilities).
 Answer ONLY from tool results — call tools for every factual claim about the network (numbers, facilities, decisions, routes).
-If the tools do not contain the answer, say so plainly. Never invent figures. All network data is from a SIMULATED demo dataset; mention that when quoting totals.
+If the tools do not contain the answer, say so plainly. Never invent figures. Zones, facilities and capacities are real published Delhi data; daily tonnages, truck loads and meter readings are simulated around those published averages. Say so when quoting totals.
 Be concise: lead with the answer, then 2–5 short supporting bullets with the key numbers. Use kWh, kg / t, ₹ and km. Format with Markdown."""
 
 
@@ -139,10 +139,10 @@ def _rules(messages: list[dict]) -> dict:
         return call_tool(name, args)
 
     if "why" in q and ("facility" in q or "select" in q or "choose" in q or "chose" in q):
-        m = re.search(r"facility\s+([a-f])\b", q)
+        m = re.search(r"\b(okhla|tehkhand|ghazipur|bawana|bhalswa|ghogha)\b", q)
         ds = t("get_facility_decisions", facility=m.group(1).upper() if m else None)
         if not ds:
-            ans = "There is no facility-selection decision on record yet" + (f" for Facility {m.group(1).upper()}" if m else "") + ". Run the demo or analyze a shipment at the hub."
+            ans = "There is no facility-selection decision on record yet" + (f" for {m.group(1).title()}" if m else "") + ". Run the demo or analyze a shipment at the hub."
         else:
             d = ds[0]
             ex = d["explanation"]
@@ -192,7 +192,8 @@ def _rules(messages: list[dict]) -> dict:
             ans = (f"Least efficient route: **{worst['code']}** (score {worst['opt_score']}/100, {worst['total_km']:.1f} km, {worst['pickups']} pickups).\n\n"
                    + "\n".join(f"- {r}" for r in (reasons or ["no single dominant issue — score reflects time-window misses"])) + f"\n\n_Solver note:_ {worst['explanation']}")
     elif "capacity" in q or "available" in q:
-        fs = sorted(t("get_facility_capacity"), key=lambda f: -f["available_tpd"])
+        # Landfills are disposal, not processing capacity; commissioning plants cannot take loads yet.
+        fs = sorted([f for f in t("get_facility_capacity") if f["technology"] != "landfill" and f["status"] == "online"], key=lambda f: -f["available_tpd"])
         top = fs[0]
         ans = (f"**{top['label']} — {top['name']}** has the most available capacity: {top['available_tpd']} t/day free ({100 - top['utilization_pct']:.0f}% of {top['capacity_tpd']} t/day).\n\n"
                + "\n".join(f"- {f['label']} ({f['technology'].replace('_', ' ')}): {f['available_tpd']} t/day free, {f['utilization_pct']:.0f}% utilised" for f in fs[:6]))

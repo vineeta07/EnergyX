@@ -25,7 +25,7 @@ export function DemoOverlay() {
       <div className="flex items-center justify-between border-b border-line px-4 py-2.5">
         <div>
           <div className="text-xs font-semibold text-ink">Full optimization run — hero scenario</div>
-          <div className="text-[11px] text-ink-3">Restaurant cluster · 1,000 kg mixed waste · real pipeline, simulated trucks &amp; meters</div>
+          <div className="text-[11px] text-ink-3">MCD Central + South + West zones · 10 t transfer load · real Delhi facilities, simulated trucks &amp; meters</div>
         </div>
         <button onClick={() => useLive.getState().demoOpen(false)} className="text-ink-3 hover:text-ink" aria-label="Hide"><X className="size-4" /></button>
       </div>

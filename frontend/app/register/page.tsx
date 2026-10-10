@@ -40,7 +40,7 @@ export default function Register() {
               <option value="facility">Waste-to-energy facility</option>
             </Select>
           </Field>
-          <Field label="Organisation"><Input value={f.organization} onChange={set("organization")} placeholder="Restaurant ABC" /></Field>
+          <Field label="Organisation"><Input value={f.organization} onChange={set("organization")} placeholder="MCD zone office, RWA, market, hotel…" /></Field>
           <Field label="Your name"><Input value={f.name} onChange={set("name")} required minLength={2} /></Field>
           <Field label="Work email"><Input type="email" value={f.email} onChange={set("email")} required /></Field>
           <Field label="Password" hint="At least 8 characters. Stored as a bcrypt hash."><Input type="password" value={f.password} onChange={set("password")} required minLength={8} /></Field>
