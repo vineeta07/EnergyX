@@ -20,7 +20,7 @@
 | in-process `cache.ts`, token revocation | **ElastiCache Redis** | Shared cache/rate-limit state across API tasks |
 | `services/events.ts` event bus | **EventBridge** bus `wattcycle-domain` | Fan-out of domain events to queues, alarms, analytics |
 | `workers/scheduler.ts` timers | **EventBridge Scheduler → SQS** | Nightly retraining, drift-triggered retraining, sweeps |
-| `ml/pipelines/train.py` thread | **SageMaker Training + Model Registry** | Versioned, reproducible training on the Linux image (XGBoost backend available) |
+| `ml/pipelines/train.py` thread | **SageMaker Training + Model Registry** | Versioned, reproducible training on the Linux image |
 | great-circle × 1.25 road factor | **Amazon Location Service** route matrix + map style | Real road distances & tiles (`NEXT_PUBLIC_MAP_STYLE`) |
 | `workers/fleet.ts` simulator | **IoT Core → Lambda** | Real GPS telemetry and facility meters; same pipeline calls |
 | console logs | **CloudWatch** logs, metrics, `EnergyModelRollingMAPE` alarm | Ops + model monitoring |

@@ -364,3 +364,6 @@ CREATE TABLE IF NOT EXISTS system_settings (
   key   TEXT PRIMARY KEY,
   value JSONB NOT NULL
 );
+
+-- v2: per-photo vision results (sample audit) on classifications
+ALTER TABLE waste_classifications ADD COLUMN IF NOT EXISTS vision JSONB;

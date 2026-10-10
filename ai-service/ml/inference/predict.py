@@ -63,14 +63,57 @@ def forecast(source: dict, history: list[dict], horizon: int = 7) -> dict:
 
 
 # ------------------------------------------------------------------ classifier
-def classify(total_kg: float, month: int, source_mix: list[dict], has_image: bool = False) -> dict:
+# Photo evidence weights by vision confidence. Thresholds come from the independent real-photo
+# evaluation (ml/evaluation/reports/vision_eval.json): predictions >= 0.8 were right ~80–91% of the
+# time, below 0.5 close to chance, so those photos are not used and are flagged for human review.
+VISION_WEIGHT = [(0.8, 1.0), (0.5, 0.5)]
+PRIOR_PSEUDO_ITEMS = 8.0  # how many "virtual sampled items" the tabular prior is worth
+
+
+def _vision_weight(conf: float) -> float:
+    for thr, w in VISION_WEIGHT:
+        if conf >= thr:
+            return w
+    return 0.0
+
+
+def classify(total_kg: float, month: int, source_mix: list[dict], images: list[bytes] | None = None) -> dict:
+    """Load composition = tabular prior (source mix) updated by a photo sample audit.
+
+    Each photo is one randomly sampled item from the load. With a Dirichlet prior
+    alpha = k * prior_composition, every usable photo adds its stream probabilities
+    (weighted by confidence) as soft counts; the posterior mean is the composition.
+    Vision streams glass/textile map to WattCycle's `other` stream.
+    """
     e = _need("classifier")
     X = pd.DataFrame([mix_features(source_mix, total_kg, month)], columns=e["model"]["features"])
     res = clf_train.predict(e["model"], X)
+    method = "tabular composition model (source mix)"
+    vision_out = None
+    if images:
+        from ml.inference import vision
+        photos = vision.classify_images(images)
+        counts = {s: PRIOR_PSEUDO_ITEMS * res["composition"][s] for s in res["composition"]}
+        used = 0.0
+        for p in photos:
+            w = _vision_weight(p["confidence"])
+            p["weight"] = w
+            p["needs_review"] = w == 0.0
+            for vs, pv in p["streams"].items():
+                counts["other" if vs in ("glass", "textile") else vs] += w * pv
+            used += w
+        tot = sum(counts.values())
+        prior_comp = res["composition"]
+        res["composition"] = {s: round(v / tot, 4) for s, v in counts.items()}
+        # Confidence: concentration-weighted blend of model confidence and photo confidence.
+        photo_conf = sum(p["weight"] * p["confidence"] for p in photos)
+        res["confidence"] = round((PRIOR_PSEUDO_ITEMS * res["confidence"] + photo_conf) / (PRIOR_PSEUDO_ITEMS + used), 4)
+        vision_out = {"model": vision.MODEL_ID, "photos": photos, "used_weight": used, "prior_composition": prior_comp,
+                      "flagged_for_review": sum(1 for p in photos if p["needs_review"])}
+        method = f"tabular prior + {len(photos)}-photo sample audit (EfficientNetB0 vision model)"
     detected = sorted(({"stream": s, "pct": round(v * 100, 1), "kg": round(v * total_kg, 1)} for s, v in res["composition"].items()), key=lambda d: -d["kg"])
     return {
-        **res, "detected": detected, "model_version": e["version"],
-        "method": "tabular composition model" + (" (image stored for vision dataset — no vision model deployed)" if has_image else ""),
+        **res, "detected": detected, "model_version": e["version"], "method": method, "vision": vision_out,
         "model_metrics": {k: e["meta"]["metrics"].get(k) for k in ("mae", "f1", "precision", "recall")},
     }
 

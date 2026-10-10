@@ -19,7 +19,7 @@ const LOOP = [
 const MODELS = [
   ["1 · Waste generation forecast", "LightGBM on scale-normalised lags (1, 2, 7 days), rolling means, weekday, season and business type. Recursive 7-day forecast with residual-quantile intervals. Benchmarked against seasonal-naive."],
   ["2 · Waste composition", "Multi-output random forest on source mix, load size and season, trained on lab audits + operator corrections (3× weight). Confidence = ensemble agreement within 6 pp. No vision model is deployed because no labelled image corpus exists — uploaded images are stored to build one."],
-  ["3 · Energy yield", "Gradient-boosted trees (LightGBM; XGBoost on Linux/SageMaker) predicting kWh/kg from stream, technology, efficiency, compatibility, load, moisture, season and leakage-safe historical facility yield. 90% interval & calibrated confidence P(|error| ≤ 10%)."],
+  ["3 · Energy yield", "LightGBM gradient-boosted trees predicting kWh/kg from stream, technology, efficiency, compatibility, load, moisture, season and leakage-safe historical facility yield. 90% interval & calibrated confidence P(|error| ≤ 10%)."],
   ["4 · Destination optimization", "Not a classifier: U = w₁·energy + w₂·efficiency + w₃·compatibility + w₄·capacity − w₅·cost − w₆·carbon − w₇·distance over eligible facilities (capacity, moisture limit, compatibility ≥ 50%). Monte-Carlo stability of the winner under prediction uncertainty."],
   ["5 · Route optimization", "OR-Tools routing: capacity dimension, soft time windows, urgency-weighted drop penalties, guided local search. Nearest-neighbour + 2-opt fallback."],
 ];

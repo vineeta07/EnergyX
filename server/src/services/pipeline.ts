@@ -17,6 +17,9 @@ import { HttpError, notFound } from "../middleware/http.ts";
 import type { AuthUser } from "../middleware/auth.ts";
 import { roadKm, transportCost, transportCo2, round, ROAD_FACTOR, AVG_SPEED_KMH, DIESEL_KG_CO2_PER_L, DIESEL_INR_PER_L } from "../utils/geo.ts";
 import { simulateEnergy, rng, STREAMS, type Stream } from "../database/simulator.ts";
+import fs from "node:fs";
+import path from "node:path";
+import { config } from "../config.ts";
 import { DEFAULT_WEIGHTS } from "../database/seed.ts";
 
 const STREAM_LABEL: Record<string, string> = { organic: "Organic", plastic: "Plastic", paper: "Paper", metal: "Metal", other: "Other / residual" };
@@ -188,18 +191,29 @@ export async function completeRoute(routeId: number, opts: { exact_weight?: bool
 }
 
 // ---------------------------------------------------------------- 3. AI CHARACTERIZATION
-export async function classifyShipment(shipmentId: number, imageKey?: string | null) {
+/** Read uploaded sample-audit photos (local disk; S3 GetObject in AWS mode) as base64 for the AI service. */
+function loadImages(keys: string[]) {
+  return keys.map((k) => {
+    if (!/^uploads\/\d{4}-\d{2}-\d{2}\/[0-9a-f-]{36}\.(jpg|png|webp)$/.test(k)) throw new HttpError(400, `Bad image key ${k}`);
+    const file = path.join(config.uploadDir, k.replace(/\//g, path.sep));
+    if (!fs.existsSync(file)) throw new HttpError(404, `Image not found: ${k}`);
+    return fs.readFileSync(file).toString("base64");
+  });
+}
+
+export async function classifyShipment(shipmentId: number, imageKeys: string[] = []) {
   const sh = await one<any>("SELECT * FROM shipments WHERE id=$1", [shipmentId]);
   if (!sh) throw notFound("Shipment");
   if (sh.status === "in_transit") throw new HttpError(409, "Shipment has not arrived at the hub yet");
   const kg = sh.measured_kg ?? sh.total_kg;
   const res = await ai.classify({
     total_kg: kg, month: new Date(sh.arrived_at ?? Date.now()).getMonth() + 1, moisture_pct: sh.moisture_pct,
-    source_mix: sh.source_mix, has_image: !!imageKey,
+    source_mix: sh.source_mix, images: loadImages(imageKeys),
   });
   const cls = await insert<any>("waste_classifications", {
     shipment_id: sh.id, model_version: res.model_version, method: res.method, composition: res.composition,
-    uncertainty: res.uncertainty, confidence: res.confidence, status: "pending_review", image_key: imageKey ?? null,
+    uncertainty: res.uncertainty, confidence: res.confidence, status: "pending_review", image_key: imageKeys.join(",") || null,
+    vision: res.vision ?? null,
   });
   const moisture = res.moisture_pct ?? sh.moisture_pct;
   await update("shipments", sh.id, { status: "classified", moisture_pct: moisture, category: res.composition.organic > 0.5 ? "Mixed organic" : "Mixed dry" });

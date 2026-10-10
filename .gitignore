@@ -10,3 +10,6 @@ ai-service/ml/data/snapshots/
 frontend/public/maplibre/
 *.tfstate*
 .terraform/
+ai-service/ml/models/pretrained/
+ai-service/ml/data/datasets/
+ai-service/ml/data/eval_cache/

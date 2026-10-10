@@ -37,7 +37,12 @@ class ClassifyIn(BaseModel):
     month: int = Field(ge=1, le=12)
     moisture_pct: Optional[float] = None
     source_mix: list[MixItem] = Field(min_length=1)
-    has_image: bool = False
+    # Base64-encoded photos of randomly sampled items from the load (sample audit), max 20.
+    images: list[str] = Field(default_factory=list, max_length=20)
+
+
+class ClassifyImageIn(BaseModel):
+    images: list[str] = Field(min_length=1, max_length=20)
 
 
 class PathwayIn(BaseModel):

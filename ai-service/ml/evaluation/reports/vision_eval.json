@@ -1,0 +1,120 @@
+{
+  "model": "Darshan764/waste-classification-v2",
+  "created": "2026-10-10T16:17:52",
+  "datasets": {
+    "trashnet": {
+      "dataset": "garythung/trashnet",
+      "n": 600,
+      "n_scored": 500,
+      "stream_accuracy": 0.618,
+      "per_class": {
+        "glass": {
+          "n": 100,
+          "recall": 0.37,
+          "precision": 0.649
+        },
+        "metal": {
+          "n": 100,
+          "recall": 0.62,
+          "precision": 0.747
+        },
+        "paper": {
+          "n": 200,
+          "recall": 0.66,
+          "precision": 0.892
+        },
+        "plastic": {
+          "n": 100,
+          "recall": 0.78,
+          "precision": 0.47
+        },
+        "organic": {
+          "n": 0,
+          "precision": 0.0
+        },
+        "textile": {
+          "n": 0,
+          "precision": 0.0
+        }
+      },
+      "confusion": {
+        "paper": {
+          "paper": 132,
+          "plastic": 28,
+          "organic": 30,
+          "textile": 7,
+          "glass": 2,
+          "metal": 1
+        },
+        "glass": {
+          "glass": 37,
+          "plastic": 41,
+          "metal": 15,
+          "organic": 1,
+          "paper": 5,
+          "textile": 1
+        },
+        "metal": {
+          "plastic": 19,
+          "metal": 62,
+          "glass": 8,
+          "paper": 9,
+          "textile": 1,
+          "organic": 1
+        },
+        "plastic": {
+          "plastic": 78,
+          "metal": 5,
+          "glass": 10,
+          "organic": 5,
+          "paper": 2
+        }
+      },
+      "confident_share": 0.476,
+      "confident_accuracy": 0.7899,
+      "unscored_labels": {
+        "trash": 100
+      },
+      "unscored_predicted_as": {
+        "textile": 6,
+        "organic": 18,
+        "plastic": 38,
+        "paper": 21,
+        "metal": 13,
+        "glass": 4
+      }
+    },
+    "organic": {
+      "dataset": "bryandts/waste_organic_anorganic_classification",
+      "n": 600,
+      "n_scored": 600,
+      "stream_accuracy": 0.7867,
+      "per_class": {
+        "not_organic": {
+          "n": 300,
+          "recall": 0.96,
+          "precision": 0.713
+        },
+        "organic": {
+          "n": 300,
+          "recall": 0.613,
+          "precision": 0.939
+        }
+      },
+      "confusion": {
+        "organic": {
+          "organic": 184,
+          "not_organic": 116
+        },
+        "not_organic": {
+          "not_organic": 288,
+          "organic": 12
+        }
+      },
+      "confident_share": 0.47,
+      "confident_accuracy": 0.9113,
+      "unscored_labels": {},
+      "unscored_predicted_as": {}
+    }
+  }
+}

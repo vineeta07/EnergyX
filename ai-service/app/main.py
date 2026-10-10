@@ -6,6 +6,8 @@ It is stateless apart from versioned model artifacts; the Node.js API owns the
 database and calls this service with a shared service key."""
 from __future__ import annotations
 
+import base64
+import binascii
 import hmac
 import time
 
@@ -15,8 +17,8 @@ from fastapi.responses import JSONResponse
 
 from app import assistant
 from app.config import SERVICE_KEY
-from app.schemas import (AssistantIn, ClassifyIn, ForecastIn, PathwayIn, RankIn, RoutesIn, TrainIn)
-from ml.inference import predict
+from app.schemas import (AssistantIn, ClassifyImageIn, ClassifyIn, ForecastIn, PathwayIn, RankIn, RoutesIn, TrainIn)
+from ml.inference import predict, vision
 from ml.inference.predict import ModelNotReady
 from ml.models import registry
 from ml.optimization import ranking, routing
@@ -28,6 +30,27 @@ app = FastAPI(title="WattCycle AI Service", version="1.0.0")
 def service_auth(x_service_key: str = Header(default="")):
     if not hmac.compare_digest(x_service_key.encode(), SERVICE_KEY.encode()):
         raise HTTPException(401, "invalid service key")
+
+
+MAX_IMAGE_BYTES = 8 * 1024 * 1024
+
+
+def _decode_images(items: list[str]) -> list[bytes]:
+    out = []
+    for s in items:
+        try:
+            b = base64.b64decode(s, validate=True)
+        except (binascii.Error, ValueError):
+            raise HTTPException(400, "images must be base64")
+        if len(b) > MAX_IMAGE_BYTES:
+            raise HTTPException(413, "image larger than 8 MB")
+        out.append(b)
+    return out
+
+
+@app.exception_handler(vision.VisionUnavailable)
+async def vision_missing(_req: Request, exc: Exception):
+    return JSONResponse(status_code=503, content={"detail": str(exc)})
 
 
 @app.exception_handler(ModelNotReady)
@@ -45,7 +68,7 @@ async def timing(request: Request, call_next):
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "models": registry.status()}
+    return {"status": "ok", "models": {**registry.status(), "vision": {"loaded": vision.info()["loaded"], "version": vision.MODEL_ID if vision.available() else None, "algorithm": vision.info()["architecture"]}}}
 
 
 @app.post("/v1/forecast", dependencies=[Depends(service_auth)])
@@ -54,8 +77,15 @@ def forecast(body: ForecastIn):
 
 
 @app.post("/v1/classify", dependencies=[Depends(service_auth)])
-def classify(body: ClassifyIn):
-    return predict.classify(body.total_kg, body.month, [m.model_dump() for m in body.source_mix], body.has_image)
+async def classify(body: ClassifyIn):
+    imgs = _decode_images(body.images) if body.images else None
+    return await run_in_threadpool(predict.classify, body.total_kg, body.month, [m.model_dump() for m in body.source_mix], imgs)
+
+
+@app.post("/v1/classify-image", dependencies=[Depends(service_auth)])
+async def classify_image(body: ClassifyImageIn):
+    """Per-photo item + stream prediction (no load composition)."""
+    return {"model": vision.MODEL_ID, "photos": await run_in_threadpool(vision.classify_images, _decode_images(body.images))}
 
 
 @app.post("/v1/predict-energy", dependencies=[Depends(service_auth)])

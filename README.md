@@ -8,7 +8,7 @@ WASTE NETWORK → COLLECTION OPTIMIZATION → PROCESSING HUB → AI CHARACTERIZA
 → FACILITY OPTIMIZATION → ROUTE → ENERGY CONVERSION → ACTUAL OUTPUT → FEEDBACK → MODEL IMPROVEMENT
 ```
 
-> **New here?** Read the **[detailed user & system guide](docs/USER_GUIDE.md)**. It walks through every role's flow screen by screen, what each button calls, and what every function does.
+> **New here?** Read the **[detailed user & system guide](docs/USER_GUIDE.md)**. It walks through every role's flow screen by screen, what each button calls, and what every function does. The models, their data contracts and the plan to move to real data are in **[docs/AI_SCHEMA.md](docs/AI_SCHEMA.md)**.
 
 The platform does not send waste to the nearest facility. It sends it where it maximizes **useful energy**, net of transport cost, carbon, and capacity.
 
@@ -40,8 +40,14 @@ Requirements: Node 20+ and Python 3.11+.
 
 ```bash
 cd server && npm install
-cd ai-service && python -m venv .venv && .venv/Scripts/pip install -r requirements.txt   # macOS/Linux: .venv/bin/pip
+cd ai-service && python -m venv .venv && .venv/Scripts/pip install torch --index-url https://download.pytorch.org/whl/cpu && .venv/Scripts/pip install -r requirements.txt   # macOS/Linux: .venv/bin/pip
 cd frontend && npm install
+```
+
+Download the pretrained waste image classifier (needs `git lfs`, about 28 MB):
+
+```bash
+git clone https://huggingface.co/Darshan764/waste-classification-v2 ai-service/ml/models/pretrained/waste-classification-v2
 ```
 
 Start the three services in separate terminals:
@@ -184,6 +190,5 @@ Contracts **freeze at the start of phase 3**. After that, only fixes go in.
 ## Honesty notes
 - **Simulated data:** all network data is simulated and flagged `is_simulated`. The UI labels it "SIMULATED". The physical simulator is `server/src/database/simulator.ts`. The ML models never see its formulas; they only see the records it writes, exactly as they would see real meter data.
 - **No vision model:** there is no labelled waste-image dataset, so none is deployed. The classifier is tabular. Uploaded images are stored to start building one.
-- **XGBoost:** the XGBoost 3.x Windows wheel segfaults on CPython 3.14, so LightGBM is the default. Set `ENERGY_BACKEND=xgboost` on Linux or SageMaker.
 - **Distances:** road distances are great-circle distance × 1.25 locally. Amazon Location Service replaces this in AWS mode.
 - **Emission factors:** 0.71 kg CO₂/kWh grid and 0.45 kg CO₂e/kg organic landfill. These are shown on `/impact`. Replace them with official factors for production.

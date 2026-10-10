@@ -1,8 +1,4 @@
-"""MODEL 3 — Energy yield prediction (gradient-boosted trees on kWh-per-kg).
-
-Backend: LightGBM by default; XGBoost via ENERGY_BACKEND=xgboost (the
-XGBoost 3.x Windows wheel segfaults on CPython 3.14, so it is opt-in and
-intended for the Linux SageMaker training image).
+"""MODEL 3 — Energy yield prediction (LightGBM on kWh-per-kg).
 
 Target is yield (kWh/kg) so the model generalises across batch sizes;
 predicted kWh = yield x kg. Uncertainty: per-stream relative residual spread
@@ -12,7 +8,6 @@ confidence = P(|error| <= 10%) under a normal residual model.
 from __future__ import annotations
 
 import math
-import os
 
 import lightgbm as lgb
 import numpy as np
@@ -22,37 +17,26 @@ from ml.data.validation import validate
 from ml.evaluation.metrics import regression
 from ml.features.build import ENERGY_FEATURES, FEATURE_GROUPS, add_hist_yield, energy_frame
 
-BACKEND = os.getenv("ENERGY_BACKEND", "lightgbm")
 PARAMS = dict(n_estimators=600, max_depth=5, learning_rate=0.04, subsample=0.9, colsample_bytree=0.9, reg_lambda=1.0, random_state=3)
 
 
-def _make(n_estimators: int, early_stop: bool):
-    if BACKEND == "xgboost":
-        import xgboost as xgb
-        return xgb.XGBRegressor(**{**PARAMS, "n_estimators": n_estimators}, min_child_weight=2, objective="reg:squarederror",
-                                **({"early_stopping_rounds": 50} if early_stop else {}))
+def _make(n_estimators: int):
     return lgb.LGBMRegressor(**{**PARAMS, "n_estimators": n_estimators}, num_leaves=31, min_child_samples=8, subsample_freq=1, verbose=-1)
 
 
 def _fit(model, X, y, Xv=None, yv=None):
     if Xv is None:
         model.fit(X, y)
-    elif BACKEND == "xgboost":
-        model.fit(X, y, eval_set=[(Xv, yv)], verbose=False)
     else:
         model.fit(X, y, eval_X=(Xv,), eval_y=(yv,), callbacks=[lgb.early_stopping(50, verbose=False)])
     return model
 
 
 def _best_iter(model) -> int:
-    if BACKEND == "xgboost":
-        return int(model.best_iteration or PARAMS["n_estimators"]) + 1
     return int(model.best_iteration_ or PARAMS["n_estimators"])
 
 
 def _gain(model) -> dict:
-    if BACKEND == "xgboost":
-        return model.get_booster().get_score(importance_type="gain")
     return dict(zip(model.feature_name_, map(float, model.booster_.feature_importance("gain"))))
 
 
@@ -80,7 +64,7 @@ def train(raw: pd.DataFrame) -> tuple[dict, dict]:
     a, b = int(n * 0.7), int(n * 0.8)
     log["split"] = {"train": a, "validation": b - a, "test": n - b, "strategy": "time-ordered 70/10/20", "live_feedback_rows": int(df["is_live_feedback"].sum())}
 
-    model = _fit(_make(PARAMS["n_estimators"], True), X.iloc[:a], y[:a], X.iloc[a:b], y[a:b])
+    model = _fit(_make(PARAMS["n_estimators"]), X.iloc[:a], y[:a], X.iloc[a:b], y[a:b])
     best = _best_iter(model)
 
     val_pred = model.predict(X.iloc[a:b])
@@ -104,7 +88,7 @@ def train(raw: pd.DataFrame) -> tuple[dict, dict]:
         backtest.append({"output_id": int(row.id), "technology": row.technology, "predicted_kwh": round(p, 1),
                          "interval": [round(p * (1 - 1.645 * sg), 1), round(p * (1 + 1.645 * sg), 1)], "confidence": round(confidence(sg), 4)})
 
-    final = _fit(_make(best, False), X, y)
+    final = _fit(_make(best), X, y)
     gain = _gain(final)
     tot = sum(gain.values()) or 1
     by_feat = {f: gain.get(f, 0.0) / tot for f in ENERGY_FEATURES}
@@ -113,7 +97,7 @@ def train(raw: pd.DataFrame) -> tuple[dict, dict]:
     obj = {"model": final, "features": ENERGY_FEATURES, "sigma": sigma, "group_importance": groups,
            "stream_tech_yield": df.groupby(["stream", "technology"])["yield"].mean().to_dict(),
            "tech_profile": df.groupby("technology")[["efficiency_pct", "compatibility_pct", "utilization_pct", "capacity_tpd"]].mean().to_dict("index")}
-    meta = {"algorithm": f"{'XGBoost' if BACKEND == 'xgboost' else 'LightGBM'} regressor (yield kWh/kg)", "dataset_size": int(n), "metrics": metrics,
+    meta = {"algorithm": "LightGBM regressor (yield kWh/kg)", "dataset_size": int(n), "metrics": metrics,
             "params": {**PARAMS, "n_estimators": best}, "feature_importance": groups, "sigma": sigma, "log": log}
     return obj, meta, backtest
 

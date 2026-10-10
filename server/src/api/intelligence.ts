@@ -14,8 +14,8 @@ export const aiRouter = Router();
 
 // ------------------------------------------------------------------ AI actions (thin wrappers over the closed-loop pipeline)
 aiRouter.post("/ai/classify", requireRole("hub", "admin"), ah(async (req, res) => {
-  const b = parse(z.object({ shipment_id: z.number().int(), image_key: z.string().max(200).optional() }), req.body);
-  const out = await P.classifyShipment(b.shipment_id, b.image_key);
+  const b = parse(z.object({ shipment_id: z.number().int(), image_keys: z.array(z.string().max(200)).max(20).optional() }), req.body);
+  const out = await P.classifyShipment(b.shipment_id, b.image_keys ?? []);
   await audit(req, "ai.classify", "shipment", b.shipment_id, { classification_id: out.classification.id });
   res.json(out);
 }));

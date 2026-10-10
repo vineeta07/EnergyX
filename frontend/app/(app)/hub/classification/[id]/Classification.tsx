@@ -16,12 +16,20 @@ export function Classification({ id }: { id: string }) {
   const canAct = role === "hub" || role === "admin";
   const qc = useQueryClient();
   const { data, isLoading, error } = useQuery({ queryKey: ["shipment", id], queryFn: () => api.get<any>(`/hub/shipments/${id}`), refetchInterval: 8000 });
-  const [img, setImg] = useState<{ key: string; url: string } | null>(null);
+  const [imgs, setImgs] = useState<{ key: string; url: string }[]>([]);
   const [pathways, setPathways] = useState<any>(null);
   const inv = () => qc.invalidateQueries();
 
-  const upload = useMutation({ mutationFn: async (file: File) => { const fd = new FormData(); fd.append("file", file); const r = await api.upload<{ key: string }>("/uploads", fd); return { key: r.key, url: URL.createObjectURL(file) }; }, onSuccess: setImg });
-  const classify = useMutation({ mutationFn: () => api.post("/ai/classify", { shipment_id: Number(id), image_key: img?.key }), onSuccess: inv });
+  // Sample audit: each photo = one randomly picked item from the load (max 20).
+  const upload = useMutation({
+    mutationFn: async (files: File[]) => Promise.all(files.slice(0, 20 - imgs.length).map(async (file) => {
+      const fd = new FormData(); fd.append("file", file);
+      const r = await api.upload<{ key: string }>("/uploads", fd);
+      return { key: r.key, url: URL.createObjectURL(file) };
+    })),
+    onSuccess: (added) => setImgs((cur) => [...cur, ...added]),
+  });
+  const classify = useMutation({ mutationFn: () => api.post("/ai/classify", { shipment_id: Number(id), image_keys: imgs.map((i) => i.key) }), onSuccess: inv });
   const predict = useMutation({ mutationFn: () => api.post("/ai/predict-energy", { shipment_id: Number(id) }), onSuccess: setPathways });
   const optimize = useMutation({ mutationFn: () => api.post("/ai/optimize-destination", { shipment_id: Number(id) }), onSuccess: inv });
 
@@ -57,11 +65,12 @@ export function Classification({ id }: { id: string }) {
             <div className="mt-4 space-y-3 border-t border-line pt-4">
               <div className="text-sm font-medium">AI waste classification</div>
               <label className="flex cursor-pointer items-center gap-3 rounded border border-dashed border-line-2 p-3 text-sm text-ink-2 hover:border-ink-3">
-                {img ? <img src={img.url} alt="Uploaded waste" className="size-14 rounded object-cover" /> : <Upload className="size-5" />}
-                <span>{upload.isPending ? "Uploading…" : img ? "Image attached — stored for the vision training dataset" : "Upload waste image (optional)"}</span>
-                <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(e) => e.target.files?.[0] && upload.mutate(e.target.files[0])} />
+                <Upload className="size-5 shrink-0" />
+                <span>{upload.isPending ? "Uploading…" : imgs.length ? `${imgs.length} sample photo${imgs.length > 1 ? "s" : ""} attached — add more (max 20)` : "Add sample photos (optional): photograph 5–20 randomly picked items from the load"}</span>
+                <input type="file" multiple accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(e) => e.target.files?.length && upload.mutate(Array.from(e.target.files))} />
               </label>
-              <p className="flex gap-1.5 text-[11px] text-ink-3"><Info className="mt-0.5 size-3 shrink-0" />The deployed classifier is a tabular composition model (source mix, load size, season). No vision model is deployed because no labelled waste-image dataset exists yet.</p>
+              {imgs.length > 0 && <div className="flex flex-wrap gap-1.5">{imgs.map((i) => <img key={i.key} src={i.url} alt="Sample item" className="size-12 rounded object-cover" />)}</div>}
+              <p className="flex gap-1.5 text-[11px] text-ink-3"><Info className="mt-0.5 size-3 shrink-0" />Composition starts from the tabular model (source mix, load size, season). Photos are classified by the EfficientNetB0 vision model (30 item types → streams) and update that estimate; photos under 50% confidence are ignored and flagged for review. Real-photo test accuracy: 62–79% overall, 79–91% on confident photos.</p>
               <Button variant="primary" loading={classify.isPending} onClick={() => classify.mutate()}><ScanSearch className="size-4" />Analyze Waste</Button>
               {(classify.error || upload.error) && <ErrorBox error={classify.error ?? upload.error} />}
             </div>
@@ -157,6 +166,20 @@ function ClassificationPanel({ cls, total, canAct }: { cls: any; total: number; 
         </div>
       </div>
       <div className="mt-4"><CompositionBar comp={edit ? Object.fromEntries(STREAMS.map((s) => [s, Math.max(0, draft[s]) / Math.max(1, sum)])) : comp} totalKg={total} /></div>
+      {cls.vision?.photos?.length > 0 && (
+        <div className="mt-4 border-t border-line pt-3">
+          <div className="mb-2 text-[11px] uppercase tracking-wider text-ink-3">Photo sample audit · {cls.vision.photos.length} photos · {cls.vision.flagged_for_review} flagged for review</div>
+          <div className="grid gap-1.5 sm:grid-cols-2">
+            {cls.vision.photos.map((p: any, i: number) => (
+              <div key={i} className={cx("flex items-center justify-between rounded border px-2 py-1.5 text-xs", p.needs_review ? "border-warn/40 bg-warn/5" : "border-line")}>
+                <span className="truncate"><span className="num text-ink-3">#{i + 1}</span> {p.top[0].label.replace(/_/g, " ")} <span className="text-ink-3">→ {p.stream}</span></span>
+                <span className="num shrink-0 pl-2">{(p.confidence * 100).toFixed(0)}%{p.needs_review ? " · review" : p.weight < 1 ? " · ½ weight" : ""}</span>
+              </div>
+            ))}
+          </div>
+          <p className="mt-2 text-[11px] text-ink-3">Before photos the tabular model estimated organic {(cls.vision.prior_composition.organic * 100).toFixed(1)}%; the photo evidence moved it to {(cls.composition.organic * 100).toFixed(1)}%.</p>
+        </div>
+      )}
       {cls.status === "corrected" && <p className="mt-3 text-xs text-cyan">Operator correction stored as labelled training data (AI said organic {(cls.composition.organic * 100).toFixed(0)}%, operator {(cls.corrected.organic * 100).toFixed(0)}%).</p>}
       {canAct && cls.status === "pending_review" && (
         <div className="mt-4 flex flex-wrap gap-2 border-t border-line pt-4">
