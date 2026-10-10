@@ -28,9 +28,9 @@ export function RoadScene() {
     loadGsap().then(({ gsap }) => {
       if (dead || !root.current) return;
       ctx = gsap.context(() => {
-        if (prefersReducedMotion()) { gsap.set("#truck", { x: 470 }); return; }
-        gsap.fromTo("#truck", { x: 0 }, { x: 470, ease: "none", scrollTrigger: { trigger: root.current, start: "top 85%", end: "bottom 25%", scrub: 0.6, onUpdate: (self) => setArrived(self.progress > 0.92) } });
-        gsap.to(".wheel", { rotation: 360, transformOrigin: "50% 50%", ease: "none", scrollTrigger: { trigger: root.current, start: "top 85%", end: "bottom 25%", scrub: 0.6 }, duration: 1 });
+        if (prefersReducedMotion()) { gsap.set("#truck", { x: 625 }); return; }
+        gsap.fromTo("#truck", { x: 0 }, { x: 625, ease: "none", scrollTrigger: { trigger: root.current, start: "top 92%", end: "top 40%", scrub: 0.5, onUpdate: (self) => setArrived(self.progress > 0.92) } });
+        gsap.to(".wheel", { rotation: 360, transformOrigin: "50% 50%", ease: "none", scrollTrigger: { trigger: root.current, start: "top 92%", end: "top 40%", scrub: 0.5 }, duration: 1 });
         gsap.fromTo(".puff", { y: 0, opacity: 0.8, scale: 0.6 }, { y: -46, opacity: 0, scale: 1.4, duration: 3.2, stagger: 1.05, repeat: -1, ease: "sine.out", transformOrigin: "50% 50%" });
       }, root);
     });
