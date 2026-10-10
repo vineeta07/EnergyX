@@ -29,9 +29,9 @@ export default function Landing() {
     loadGsap().then(({ gsap }) => {
       if (off || !root.current) return;
       ctx = gsap.context(() => {
-        gsap.from("[data-hero]", { y: 22, opacity: 0, duration: 0.8, ease: "power3.out", stagger: 0.12 });
-        gsap.utils.toArray<HTMLElement>("[data-reveal]").forEach((el) => gsap.from(el, { y: 28, opacity: 0, duration: 0.8, ease: "power2.out", scrollTrigger: { trigger: el, start: "top 88%", once: true } }));
-        gsap.utils.toArray<HTMLElement>("[data-stagger]").forEach((wrap) => gsap.from(wrap.children, { y: 22, opacity: 0, duration: 0.7, stagger: 0.12, ease: "power2.out", scrollTrigger: { trigger: wrap, start: "top 85%", once: true } }));
+        gsap.fromTo("[data-hero]", { y: 22, opacity: 0 }, { y: 0, opacity: 1, duration: 0.8, ease: "power3.out", stagger: 0.12, clearProps: "all" });
+        gsap.utils.toArray<HTMLElement>("[data-reveal]").forEach((el) => gsap.fromTo(el, { y: 28, opacity: 0 }, { y: 0, opacity: 1, duration: 0.8, ease: "power2.out", clearProps: "all", scrollTrigger: { trigger: el, start: "top 88%", once: true } }));
+        gsap.utils.toArray<HTMLElement>("[data-stagger]").forEach((wrap) => gsap.fromTo(wrap.children, { y: 22, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, stagger: 0.12, ease: "power2.out", clearProps: "all", scrollTrigger: { trigger: wrap, start: "top 85%", once: true } }));
       }, root);
     });
     return () => { off = true; ctx?.revert(); };

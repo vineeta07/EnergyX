@@ -27,12 +27,19 @@ export default function Login() {
   const [err, setErr] = useState<unknown>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
+  // Entrance animation. fromTo with clearProps and a revert on cleanup, so a second run
+  // (React dev double-invoke, language change) can never leave the text invisible.
   useEffect(() => {
     if (prefersReducedMotion()) return;
+    let ctx: { revert: () => void } | undefined; let off = false;
     loadGsap().then(({ gsap }) => {
-      gsap.from("[data-role-row]", { x: 24, opacity: 0, duration: 0.6, ease: "power2.out", stagger: 0.09, delay: 0.2 });
-      gsap.from("[data-login-card] > *", { y: 14, opacity: 0, duration: 0.5, ease: "power2.out", stagger: 0.07 });
+      if (off) return;
+      ctx = gsap.context(() => {
+        gsap.fromTo("[data-login-card] > *", { y: 14, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: "power2.out", stagger: 0.07, clearProps: "all" });
+        gsap.fromTo("[data-role-row]", { x: 24, opacity: 0 }, { x: 0, opacity: 1, duration: 0.6, ease: "power2.out", stagger: 0.09, delay: 0.2, clearProps: "all" });
+      });
     });
+    return () => { off = true; ctx?.revert(); };
   }, []);
 
   async function login(e: string, p: string) {
