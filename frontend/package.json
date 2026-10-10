@@ -10,9 +10,16 @@
     "postinstall": "node -e \"const fs=require('fs');fs.mkdirSync('public/maplibre',{recursive:true});for(const f of ['maplibre-gl-worker.mjs','maplibre-gl-shared.mjs'])fs.copyFileSync('node_modules/maplibre-gl/dist/'+f,'public/maplibre/'+f)\""
   },
   "dependencies": {
+    "@fontsource-variable/fraunces": "^5.3.0",
+    "@fontsource-variable/inter": "^5.3.0",
+    "@fontsource-variable/noto-sans-bengali": "^5.3.0",
+    "@fontsource-variable/noto-sans-devanagari": "^5.3.0",
+    "@fontsource-variable/noto-sans-gurmukhi": "^5.3.0",
+    "@fontsource-variable/noto-sans-tamil": "^5.3.0",
     "@tanstack/react-query": "^5.104.1",
     "clsx": "^2.1.1",
     "framer-motion": "^14.0.0",
+    "gsap": "^3.15.0",
     "lucide-react": "^1.53.0",
     "maplibre-gl": "^6.13.0",
     "next": "16.4.0",

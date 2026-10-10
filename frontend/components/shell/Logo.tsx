@@ -1,11 +1,12 @@
+"use client";
 import Link from "next/link";
 
 export function LogoMark({ size = 22 }: { size?: number }) {
-  // Closed loop with an energy bolt: the product concept in one glyph.
+  // An open loop with a short leaf-shaped tick: collection coming back as energy.
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
-      <circle cx="12" cy="12" r="9.5" stroke="var(--accent)" strokeWidth="1.6" strokeDasharray="44 6" strokeLinecap="round" />
-      <path d="M13.2 5.5 8.6 12.7h3.3l-1.1 5.8 4.6-7.3h-3.3l1.1-5.7Z" fill="var(--accent)" />
+      <path d="M12 3.5a8.5 8.5 0 1 0 8.5 8.5" stroke="var(--accent)" strokeWidth="1.7" strokeLinecap="round" />
+      <path d="M12 12.5c0-3.2 2.3-5.4 6.3-5.7-.1 3.9-2.4 6-6.3 5.7Z" fill="var(--gold)" />
     </svg>
   );
 }
@@ -14,7 +15,7 @@ export function Logo({ href = "/" }: { href?: string }) {
   return (
     <Link href={href} className="flex items-center gap-2">
       <LogoMark />
-      <span className="text-[15px] font-semibold tracking-tight text-ink">Watt<span className="text-accent">Cycle</span></span>
+      <span className="font-serif text-[17px] font-medium text-ink">WattCycle</span>
     </Link>
   );
 }
