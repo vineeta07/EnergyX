@@ -27,7 +27,7 @@ export function Panel({ title, subtitle, actions, children, className, bodyClass
 /** One figure with a caption. `accent` marks energy output, which is the one number shown in marigold. */
 export function Kpi({ label, value, unit, sub, icon, accent, href }: { label: string; value: ReactNode; unit?: string; sub?: ReactNode; icon?: ReactNode; accent?: boolean; href?: string }) {
   const body = (
-    <div className={cx("group h-full rounded-xl border bg-panel px-4 py-3 shadow-[var(--shadow)] transition-colors", "border-line", href && "hover:border-line-2")}>
+    <div className={cx("group h-full rounded-xl border bg-panel px-4 py-3 shadow-[var(--shadow)] transition-all duration-200", "border-line", href && "hover:-translate-y-0.5 hover:border-line-2 hover:shadow-[var(--popover-shadow)]")}>
       <div className="flex items-center justify-between gap-2 text-xs text-ink-3">
         <span>{label}</span>
         {icon && <span className="text-ink-3">{icon}</span>}
@@ -71,7 +71,7 @@ export function Status({ s }: { s: string }) {
 }
 
 export function SimTag({ label }: { label?: string }) {
-  return <span title={t("Demo data produced by the simulator. It is not a real-world measurement.")} className="whitespace-nowrap rounded-sm border border-dashed border-warn/50 px-1 py-px text-xs text-warn">{label ?? t("Simulated")}</span>;
+  return <span title={t("Demo data produced by the simulator. It is not a real-world measurement.")} className="whitespace-nowrap rounded-full bg-raised px-2 py-0.5 text-xs text-ink-3">{label ?? t("Simulated")}</span>;
 }
 
 export function Button({ variant = "secondary", size = "md", loading, className, children, ...rest }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "secondary" | "ghost" | "danger"; size?: "sm" | "md"; loading?: boolean }) {

@@ -3,11 +3,11 @@ import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { PublicNav, PublicFooter } from "@/components/shell/PublicNav";
-import { SimTag } from "@/components/ui";
 import { LoadPicker } from "@/components/landing/LoadPicker";
 import { StepExplorer } from "@/components/landing/StepExplorer";
 import { RoadScene } from "@/components/landing/Scenes";
 import { CountUp } from "@/components/landing/CountUp";
+import { Magnetic, ScrollProgress, Tilt } from "@/components/landing/Fx";
 import { loadGsap, prefersReducedMotion } from "@/components/landing/gsapKit";
 import { t } from "@/lib/i18n";
 
@@ -46,6 +46,7 @@ export default function Landing() {
 
   return (
     <div ref={root} className="min-h-screen overflow-x-hidden">
+      <ScrollProgress />
       <PublicNav />
 
       <section className="border-b border-line">
@@ -57,11 +58,11 @@ export default function Landing() {
               {t("WattCycle follows waste from ward collection points to a hub scale, then picks the plant where it turns into the most electricity. A landfill takes any load and gives back nothing. A plant that suits the waste gives back power.")}
             </p>
             <div data-hero className="mt-7 flex flex-wrap gap-3">
-              <Link href="/login" className="inline-flex h-11 items-center rounded-full bg-accent px-6 text-sm font-medium text-on-accent transition-transform hover:-translate-y-0.5">{t("Open dashboard")}</Link>
-              <Link href="/about" className="inline-flex h-11 items-center rounded-full border border-line-2 px-6 text-sm text-ink transition-transform hover:-translate-y-0.5 hover:border-ink-3">{t("Read how it works")}</Link>
+              <Magnetic><Link href="/login" className="inline-flex h-11 items-center rounded-full bg-accent px-6 text-sm font-medium text-on-accent">{t("Open dashboard")}</Link></Magnetic>
+              <Magnetic><Link href="/about" className="inline-flex h-11 items-center rounded-full border border-line-2 px-6 text-sm text-ink hover:border-ink-3">{t("Read how it works")}</Link></Magnetic>
             </div>
           </div>
-          <div data-hero><LoadPicker /></div>
+          <Tilt className="[transform-style:preserve-3d]"><div data-hero><LoadPicker /></div></Tilt>
         </div>
       </section>
 
@@ -79,7 +80,7 @@ export default function Landing() {
               </div>
             ))}
           </dl>
-          <p className="mt-6 flex items-center gap-2 text-xs text-ink-3"><SimTag />{t("Counters come from the demo network. Plants and zones are real; daily weights and meter readings are simulated.")}</p>
+          <p className="mt-6 text-xs text-ink-3">{t("Counters come from the demo network. Plants and zones are real; daily weights and meter readings are simulated.")}</p>
         </div>
       </section>
 
@@ -113,7 +114,7 @@ export default function Landing() {
             <h2 className="font-serif text-2xl font-medium text-ink">{t("Watch one load go from pickup to meter in about 25 seconds.")}</h2>
             <p className="mt-2 text-sm leading-relaxed text-ink-2">{t("Open any demo role and press Run a full load. Each stage calls the real pipeline. Only the trucks and the plant meter are simulated.")}</p>
           </div>
-          <Link href="/login" className="inline-flex h-11 items-center rounded-full bg-accent px-6 text-sm font-medium text-on-accent transition-transform hover:-translate-y-0.5">{t("Open dashboard")}</Link>
+          <Magnetic><Link href="/login" className="inline-flex h-11 items-center rounded-full bg-accent px-6 text-sm font-medium text-on-accent">{t("Open dashboard")}</Link></Magnetic>
         </div>
       </section>
       <PublicFooter />

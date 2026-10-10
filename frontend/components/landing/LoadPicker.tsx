@@ -1,9 +1,21 @@
 "use client";
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { cx, n } from "@/lib/format";
 import { t } from "@/lib/i18n";
-import { SimTag } from "@/components/ui";
 import { loadGsap, prefersReducedMotion } from "./gsapKit";
+
+/** Eases from the previous value to the new one. */
+function Num({ v }: { v: number }) {
+  const [shown, setShown] = useState(v);
+  const from = useRef(v);
+  useEffect(() => {
+    if (prefersReducedMotion()) { setShown(v); from.current = v; return; }
+    let tween: { kill: () => void } | undefined; let off = false;
+    loadGsap().then(({ gsap }) => { if (off) return; const o = { x: from.current }; tween = gsap.to(o, { x: v, duration: 0.7, ease: "power2.out", onUpdate: () => { setShown(Math.round(o.x)); from.current = o.x; } }); });
+    return () => { off = true; tween?.kill(); };
+  }, [v]);
+  return <>{n(shown)}</>;
+}
 
 // Illustrative yields (kWh per kg) and distances from the Okhla hub. Not live data.
 const PLANTS = [
@@ -47,7 +59,6 @@ export function LoadPicker() {
     <div className="rounded-2xl border border-line-2 bg-panel p-5 shadow-[var(--shadow)]">
       <div className="flex items-center justify-between gap-3">
         <h2 className="font-serif text-xl font-medium text-ink">{t("Try a load")}</h2>
-        <SimTag label={t("Illustrative figures")} />
       </div>
       <p className="mt-1 text-sm text-ink-2">{t("Pick what is in the truck and how much. The plants re-rank as you change it.")}</p>
 
@@ -70,7 +81,7 @@ export function LoadPicker() {
               <span className={i === 0 ? "font-medium text-ink" : "text-ink-2"}>{t(r.name)}</span>
               <span className="num text-xs text-ink-3">{r.km} km</span>
             </div>
-            <span className="num text-right text-sm text-ink">{n(r.kwh)} kWh</span>
+            <span className="num text-right text-sm text-ink"><Num v={r.kwh} /> kWh</span>
             <div className="col-span-2 h-1.5 overflow-hidden rounded-full bg-line"><div className={cx("pick-bar h-full rounded-full", i === 0 ? "bg-gold" : "bg-ink-3")} style={{ width: `${Math.max(2, (r.kwh / max) * 100)}%` }} /></div>
           </li>
         ))}

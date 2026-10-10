@@ -16,7 +16,24 @@ export const STAGES = [
 
 export function StepExplorer() {
   const [i, setI] = useState(0);
+  const [auto, setAuto] = useState(true);
+  const [seen, setSeen] = useState(false);
   const panel = useRef<HTMLDivElement>(null);
+  const wrap = useRef<HTMLDivElement>(null);
+  const choose = (k: number) => { setAuto(false); setI(k); };
+
+  // Walk through the steps on its own until the visitor takes over.
+  useEffect(() => {
+    if (!wrap.current) return;
+    const io = new IntersectionObserver(([e]) => setSeen(e.isIntersecting), { threshold: 0.35 });
+    io.observe(wrap.current);
+    return () => io.disconnect();
+  }, []);
+  useEffect(() => {
+    if (!auto || !seen || prefersReducedMotion()) return;
+    const id = setTimeout(() => setI((x) => (x + 1) % STAGES.length), 5200);
+    return () => clearTimeout(id);
+  }, [auto, seen, i]);
 
   useEffect(() => {
     if (!panel.current || prefersReducedMotion()) return;
@@ -32,11 +49,11 @@ export function StepExplorer() {
   }, [i]);
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[1fr_1.1fr]">
+    <div ref={wrap} className="grid gap-8 lg:grid-cols-[1fr_1.1fr]">
       <ol className="space-y-2" role="tablist" aria-label={t("Steps")}>
         {STAGES.map(([name, what, who], k) => (
           <li key={name}>
-            <button role="tab" aria-selected={i === k} onClick={() => setI(k)} onMouseEnter={() => setI(k)}
+            <button role="tab" aria-selected={i === k} onClick={() => choose(k)} onMouseEnter={() => choose(k)}
               className={cx("w-full rounded-xl border px-4 py-3 text-left transition-all", i === k ? "border-accent/60 bg-panel shadow-[var(--shadow)]" : "border-transparent hover:border-line-2 hover:bg-panel/60")}>
               <span className="flex items-baseline gap-3">
                 <span className="num text-sm text-ink-3">{String(k + 1).padStart(2, "0")}</span>
@@ -44,6 +61,7 @@ export function StepExplorer() {
                 <span className="ml-auto text-xs text-ink-3">{t(who)}</span>
               </span>
               {i === k && <span className="mt-1.5 block pl-9 text-sm leading-relaxed text-ink-2">{t(what)}</span>}
+              {i === k && auto && seen && <span key={i} className="step-timer mt-2 block h-0.5 origin-left rounded bg-accent/60" />}
             </button>
           </li>
         ))}
