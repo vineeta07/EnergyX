@@ -128,3 +128,11 @@ html[lang="hi"] body, html[lang="bn"] body, html[lang="ta"] body, html[lang="pa"
 .md ol { list-style: decimal; }
 .md table { border-collapse: collapse; margin: 0.5rem 0; font-size: 11px; }
 .md th, .md td { border: 1px solid var(--line-2); padding: 3px 6px; text-align: left; }
+
+/* Autoplay timer under the active step. */
+@keyframes step-timer { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.step-timer { animation: step-timer 5.2s linear forwards; }
+@media (prefers-reduced-motion: reduce) { .step-timer { animation: none; } }
+
+/* Buttons feel pressed. */
+button:not(:disabled):active, a[class*="rounded-full"]:active { transform: scale(0.98); }

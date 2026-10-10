@@ -1,7 +1,6 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
 import { PublicNav, PublicFooter } from "@/components/shell/PublicNav";
-import { SimTag } from "@/components/ui";
 import { n, NONE } from "@/lib/format";
 import { t } from "@/lib/i18n";
 
@@ -18,7 +17,7 @@ export default function Impact() {
       <PublicNav />
       <div className="mx-auto max-w-5xl px-4 py-14 sm:px-6">
         <h1 className="font-serif text-4xl font-medium text-ink">{t("What has been measured so far")}</h1>
-        <p className="mt-3 flex flex-wrap items-center gap-2 text-ink-2"><SimTag />{t("These figures come from the demo network's simulated meters. They are recalculated each time you open the page.")}</p>
+        <p className="mt-3 text-ink-2">{t("These figures come from the demo network's simulated meters. They are recalculated each time you open the page.")}</p>
 
         <table className="mt-10 w-full">
           <tbody>

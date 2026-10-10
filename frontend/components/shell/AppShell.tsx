@@ -18,6 +18,7 @@ import { useLiveSocket } from "@/hooks/useLiveSocket";
 import { AssistantDrawer } from "@/features/assistant/AssistantDrawer";
 import { DemoOverlay } from "@/features/demo/DemoOverlay";
 import { Tour, useTour } from "@/features/onboarding/Tour";
+import { PageFx } from "./PageFx";
 import { SeverityIcon } from "@/components/ui";
 
 type NavItem = { href: string; label: string; icon: any; roles?: Role[] };
@@ -65,7 +66,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           {nav.map((n) => {
             const active = path === n.href || (n.href !== "/dashboard" && path.startsWith(n.href));
             return (
-              <Link key={n.href} href={n.href} aria-current={active ? "page" : undefined} className={cx("flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm transition-colors", active ? "bg-raised text-ink" : "text-ink-2 hover:bg-raised/60 hover:text-ink")}>
+              <Link key={n.href} href={n.href} aria-current={active ? "page" : undefined} className={cx("flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm transition-all hover:translate-x-0.5", active ? "bg-raised text-ink" : "text-ink-2 hover:bg-raised/60 hover:text-ink")}>
                 <n.icon className={cx("size-4", active ? "text-accent" : "text-ink-3")} />
                 {t(n.label)}
                 {active && <span className="ml-auto h-4 w-0.5 rounded bg-accent" />}
@@ -99,7 +100,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             </div>
           </div>
         </header>
-        <main className="min-w-0 flex-1 px-4 py-6 lg:px-6">{children}</main>
+        <main className="min-w-0 flex-1 px-4 py-6 lg:px-6"><PageFx key={path}>{children}</PageFx></main>
       </div>
       <AssistantDrawer open={assistant} onClose={() => setAssistant(false)} />
       <DemoOverlay />

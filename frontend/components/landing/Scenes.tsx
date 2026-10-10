@@ -9,7 +9,7 @@ export function MediaFrame({ children }: { children: ReactNode }) {
   return (
     <div className="relative overflow-hidden rounded-2xl border border-line bg-raised">
       {children}
-      <video className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${playing ? "opacity-100" : "opacity-0"}`}
+      <video className={`pointer-events-none absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${playing ? "opacity-100" : "opacity-0"}`}
         src="/media/hero.mp4" poster="/media/hero.jpg" autoPlay muted loop playsInline onLoadedData={() => setPlaying(true)} onError={() => setPlaying(false)} />
     </div>
   );
@@ -18,7 +18,9 @@ export function MediaFrame({ children }: { children: ReactNode }) {
 /** The whole route in one picture. The truck follows the scroll, the smoke rises on its own. */
 export function RoadScene() {
   const root = useRef<HTMLDivElement>(null);
-  const [lit, setLit] = useState(false);
+  const [hover, setHover] = useState(false);
+  const [arrived, setArrived] = useState(false);
+  const lit = hover || arrived;
 
   useEffect(() => {
     let ctx: { revert: () => void } | undefined;
@@ -26,8 +28,8 @@ export function RoadScene() {
     loadGsap().then(({ gsap }) => {
       if (dead || !root.current) return;
       ctx = gsap.context(() => {
-        if (prefersReducedMotion()) { gsap.set("#truck", { x: 640 }); return; }
-        gsap.fromTo("#truck", { x: 0 }, { x: 640, ease: "none", scrollTrigger: { trigger: root.current, start: "top 85%", end: "bottom 25%", scrub: 0.6 } });
+        if (prefersReducedMotion()) { gsap.set("#truck", { x: 470 }); return; }
+        gsap.fromTo("#truck", { x: 0 }, { x: 470, ease: "none", scrollTrigger: { trigger: root.current, start: "top 85%", end: "bottom 25%", scrub: 0.6, onUpdate: (self) => setArrived(self.progress > 0.92) } });
         gsap.to(".wheel", { rotation: 360, transformOrigin: "50% 50%", ease: "none", scrollTrigger: { trigger: root.current, start: "top 85%", end: "bottom 25%", scrub: 0.6 }, duration: 1 });
         gsap.fromTo(".puff", { y: 0, opacity: 0.8, scale: 0.6 }, { y: -46, opacity: 0, scale: 1.4, duration: 3.2, stagger: 1.05, repeat: -1, ease: "sine.out", transformOrigin: "50% 50%" });
       }, root);
@@ -51,16 +53,16 @@ export function RoadScene() {
             <path d="M100 64 V20 H168 V64" fill="var(--panel)" stroke="var(--line-2)" strokeWidth="2" /><path d="M94 22 L134 0 L174 22Z" fill="var(--warn)" opacity="0.8" />
           </g>
           {/* plant */}
-          <g transform="translate(930 80)" onMouseEnter={() => setLit(true)} onMouseLeave={() => setLit(false)} style={{ cursor: "pointer" }} onClick={() => setLit(!lit)}>
+          <g transform="translate(930 80)" onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} onClick={() => setHover(!hover)} style={{ cursor: "pointer" }} className="plant">
             <rect x="0" y="70" width="190" height="112" rx="6" fill="var(--panel)" stroke="var(--line-2)" strokeWidth="2" />
             <rect x="26" y="20" width="26" height="52" fill="var(--raised)" stroke="var(--line-2)" strokeWidth="2" />
             <rect x="96" y="0" width="26" height="72" fill="var(--raised)" stroke="var(--line-2)" strokeWidth="2" />
-            {[28, 74, 120].map((x) => <rect key={x} x={x} y="96" width="30" height="26" rx="3" fill={lit ? "var(--gold)" : "var(--line)"} style={{ transition: "fill .4s" }} />)}
+            {[28, 74, 120].map((x) => <rect key={x} x={x} y="96" width="30" height="26" rx="3" fill={lit ? "var(--gold)" : "var(--line)"} style={{ transition: "fill .5s, filter .5s", filter: lit ? "drop-shadow(0 0 6px var(--gold))" : "none" }} />)}
             <rect x="150" y="136" width="28" height="46" rx="3" fill="var(--accent)" />
             {[0, 1, 2].map((i) => <circle key={i} className="puff" cx="109" cy="-6" r="9" fill="var(--ink-3)" />)}
           </g>
           {/* truck */}
-          <g id="truck" transform="translate(120 0)">
+          <g id="truck" transform="translate(120 0)" pointerEvents="none">
             <g transform="translate(150 196)">
               <rect x="0" y="0" width="110" height="46" rx="5" fill="var(--panel)" stroke="var(--ink-2)" strokeWidth="2" />
               <path d="M110 12 H138 L156 32 V46 H110Z" fill="var(--panel)" stroke="var(--ink-2)" strokeWidth="2" />
@@ -71,7 +73,7 @@ export function RoadScene() {
           </g>
         </svg>
       </MediaFrame>
-      <p className="mt-2 text-xs text-ink-3">{t("Scroll and the truck follows the road to the plant. Hover the plant to switch its lights on.")}</p>
+      <p className="mt-2 text-xs text-ink-3">{t("Scroll and the truck follows the road to the plant. The lights come on when it arrives, or hover the plant.")}</p>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Factory, Truck, Warehouse, Zap, ShieldCheck } from "lucide-react";
@@ -9,6 +9,7 @@ import { Button, ErrorBox, Field, Input } from "@/components/ui";
 import { Logo } from "@/components/shell/Logo";
 import { LangSwitcher, ThemeToggle } from "@/components/shell/Prefs";
 import { t } from "@/lib/i18n";
+import { loadGsap, prefersReducedMotion } from "@/components/landing/gsapKit";
 
 const DEMO = [
   { email: "admin@wattcycle.demo", role: "System operator", d: "The whole network, plant decisions, models and admin", icon: ShieldCheck },
@@ -26,6 +27,14 @@ export default function Login() {
   const [err, setErr] = useState<unknown>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (prefersReducedMotion()) return;
+    loadGsap().then(({ gsap }) => {
+      gsap.from("[data-role-row]", { x: 24, opacity: 0, duration: 0.6, ease: "power2.out", stagger: 0.09, delay: 0.2 });
+      gsap.from("[data-login-card] > *", { y: 14, opacity: 0, duration: 0.5, ease: "power2.out", stagger: 0.07 });
+    });
+  }, []);
+
   async function login(e: string, p: string) {
     setBusy(e); setErr(null);
     try {
@@ -40,7 +49,7 @@ export default function Login() {
     <div className="grid min-h-screen lg:grid-cols-[1fr_1.1fr]">
       <div className="flex flex-col px-6 py-8 sm:px-12">
         <div className="flex items-center justify-between"><Logo /><div className="flex gap-2"><LangSwitcher /><ThemeToggle /></div></div>
-        <div className="mx-auto my-auto w-full max-w-sm py-12">
+        <div data-login-card className="mx-auto my-auto w-full max-w-sm py-12">
           <h1 className="font-serif text-3xl font-medium text-ink">{t("Login")}</h1>
           <p className="mt-2 text-sm text-ink-2">{t("Use your WattCycle account, or pick a demo role.")}</p>
           <form className="mt-6 space-y-4" onSubmit={(e) => { e.preventDefault(); login(email, password); }}>
@@ -54,12 +63,12 @@ export default function Login() {
       </div>
       <div className="border-l border-line bg-panel px-6 py-12 sm:px-12 lg:py-20">
         <div className="mx-auto max-w-md">
-          <span className="inline-flex rounded-full border border-dashed border-warn/60 px-2.5 py-0.5 text-xs text-warn">{t("Demo mode")}</span>
+          <span className="inline-flex rounded-full bg-accent/15 px-3 py-1 text-xs text-accent">{t("Demo mode")}</span>
           <h2 className="mt-3 font-serif text-2xl font-medium text-ink">{t("One network, five roles")}</h2>
           <p className="mt-2 text-sm leading-relaxed text-ink-2">{t("Each role sees the screens and buttons its job needs. These accounts run in demo mode on simulated data.")}</p>
           <ul className="mt-6 divide-y divide-line border-y border-line">
             {DEMO.map((d) => (
-              <li key={d.email}>
+              <li key={d.email} data-role-row>
                 <button onClick={() => login(d.email, "demo1234")} disabled={!!busy}
                   className="group flex w-full items-center gap-3 rounded-xl px-3 py-3.5 text-left transition-all hover:bg-raised hover:pl-4 disabled:opacity-60">
                   <d.icon className="size-5 shrink-0 text-ink-3" />
