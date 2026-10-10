@@ -247,7 +247,8 @@ export async function seed(reset = false) {
   return true;
 }
 
-if (process.argv[1]?.includes("seed")) {
+// Run as a script only when invoked directly (`tsx src/database/seed.ts`), not when imported.
+if (process.argv[1] && /[\\/]database[\\/]seed\.ts$/.test(process.argv[1])) {
   const reset = process.argv.includes("--reset");
   seed(reset).then(async (did) => {
     console.log(did ? "Seed complete." : "Database already seeded (use --reset).");

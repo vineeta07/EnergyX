@@ -72,6 +72,8 @@ class FacilityIn(BaseModel):
     n_history: int = 0
     historical_yield_kwh_per_kg: Optional[float] = None
     distance_km: float
+    drive_min: Optional[float] = None
+    distance_source: Optional[str] = None
     transport_cost_inr: float
     transport_co2_kg: float
 
@@ -134,6 +136,31 @@ class RoutesIn(BaseModel):
     stops: list[StopIn] = Field(min_length=1, max_length=200)
     road_factor: float = 1.25
     speed_kmh: float = 28
+    # Optional real road-network matrices (depot first, then stops) — e.g. OSRM / Amazon Location.
+    distance_matrix_km: Optional[list[list[float]]] = None
+    duration_matrix_min: Optional[list[list[float]]] = None
+    distance_source: Optional[str] = None
+
+
+class PlanZone(BaseModel):
+    name: str
+    tpd: float = Field(gt=0)
+    current_destinations: list[str] = []
+
+
+class PlanFacility(BaseModel):
+    code: str
+    label: str
+    technology: str
+    status: str
+    capacity_tpd: float = Field(ge=0)
+    kwh_per_t: float = Field(ge=0)
+
+
+class PlanIn(BaseModel):
+    zones: list[PlanZone] = Field(min_length=1, max_length=300)
+    facilities: list[PlanFacility] = Field(min_length=1, max_length=200)
+    dist: dict[str, dict[str, float]]
 
 
 class RunIn(BaseModel):

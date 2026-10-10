@@ -15,7 +15,7 @@ import { raiseAlert } from "./alerts.ts";
 import { getSetting, nextCode } from "./settings.ts";
 import { HttpError, notFound } from "../middleware/http.ts";
 import type { AuthUser } from "../middleware/auth.ts";
-import { roadKm, transportCost, transportCo2, round, ROAD_FACTOR, AVG_SPEED_KMH, DIESEL_KG_CO2_PER_L, DIESEL_INR_PER_L } from "../utils/geo.ts";
+import { roadKm, roadLookup, transportCost, transportCo2, round, ROAD_FACTOR, AVG_SPEED_KMH, DIESEL_KG_CO2_PER_L, DIESEL_INR_PER_L } from "../utils/geo.ts";
 import { simulateEnergy, rng, STREAMS, POTENTIAL_KWH_PER_KG, type Stream, type Technology } from "../database/simulator.ts";
 import fs from "node:fs";
 import path from "node:path";
@@ -94,6 +94,8 @@ export async function optimizeCollection(opts: { hub_id?: number; pickup_ids?: n
       window_end_min: p.window_end ? Math.max(30, (new Date(p.window_end).getTime() - now) / 60_000) : 600,
     })),
     road_factor: ROAD_FACTOR, speed_kmh: AVG_SPEED_KMH,
+    // Real road network (OSRM) distances & drive times; the solver falls back to great-circle estimates if absent.
+    ...roadMatrices([hub, ...pickups]),
   });
   if (opts.dry_run) return { hub, ...result };
 
@@ -106,7 +108,7 @@ export async function optimizeCollection(opts: { hub_id?: number; pickup_ids?: n
       code: await nextCode("routes", "R", 5000), vehicle_id: v.id, kind: "collection", status: "planned",
       total_km: round(r.total_km, 2), baseline_km: round(r.baseline_km, 2), duration_min: round(r.duration_min, 0),
       fuel_l: round(fuel, 2), co2_kg: round(v.fuel_l_per_km ? fuel * DIESEL_KG_CO2_PER_L : r.total_km * 0.09, 2),
-      cost_inr: round(fuel * DIESEL_INR_PER_L + r.duration_min * 6, 0), opt_score: r.opt_score, solver: result.solver, explanation: r.explanation,
+      cost_inr: round(fuel * DIESEL_INR_PER_L + r.duration_min * 6, 0), opt_score: r.opt_score, solver: `${result.solver} · roads: ${result.distance_source ?? "estimate"}`, explanation: r.explanation,
     });
     let seq = 0;
     await insert("route_stops", { route_id: route.id, seq: seq++, stop_type: "depot", ref_id: hub.id, name: hub.name, lat: hub.lat, lng: hub.lng, eta_min: 0 });
@@ -124,6 +126,15 @@ export async function optimizeCollection(opts: { hub_id?: number; pickup_ids?: n
     await publish("PickupAssigned", `${r.stop_ids.length} pickups assigned to ${v.code}`, { route_id: route.id });
   }
   return { hub, solver: result.solver, routes: await Promise.all(created.map((c) => getRoute(c.id))), unassigned: result.unassigned };
+}
+
+function roadMatrices(points: { lat: number; lng: number }[]) {
+  const look = points.map((a) => points.map((b) => roadLookup(a, b)));
+  return {
+    distance_matrix_km: look.map((row) => row.map((x) => round(x.km, 3))),
+    duration_matrix_min: look.map((row) => row.map((x) => round(x.minutes, 2))),
+    distance_source: look.flat().every((x) => x.source === "osrm") ? "osrm" : "mixed",
+  };
 }
 
 export async function getRoute(id: number) {
@@ -266,14 +277,16 @@ export async function facilityCandidates(origin: { lat: number; lng: number }, s
        (SELECT SUM(e.actual_kwh)/NULLIF(SUM(e.input_kg),0) FROM energy_outputs e WHERE e.facility_id=f.id AND e.stream=c.stream) AS hist_yield
      FROM facilities f JOIN facility_capabilities c ON c.facility_id=f.id AND c.stream=$1 ORDER BY f.code`, [stream]);
   return rows.map((f) => {
-    const km = roadKm(origin, f);
+    const leg = roadLookup(origin, f);
+    const km = leg.km;
     return {
       id: f.id, code: f.code, label: f.label, name: f.name, technology: f.technology, lat: f.lat, lng: f.lng,
       efficiency_pct: f.efficiency_pct, utilization_pct: f.utilization_pct, capacity_tpd: f.capacity_tpd,
       compatibility_pct: f.compatibility_pct, max_moisture_pct: f.max_moisture_pct, carbon_intensity: f.carbon_intensity,
       gate_fee_inr_per_t: f.gate_fee_inr_per_t, status: f.status, n_history: f.n_history,
       historical_yield_kwh_per_kg: f.hist_yield != null ? round(f.hist_yield, 4) : null,
-      distance_km: round(km, 1), transport_cost_inr: round(transportCost(km), 0), transport_co2_kg: round(transportCo2(km), 1),
+      distance_km: round(km, 1), drive_min: round(leg.minutes, 0), distance_source: leg.source,
+      transport_cost_inr: round(transportCost(km), 0), transport_co2_kg: round(transportCo2(km), 1),
     };
   });
 }
@@ -396,11 +409,12 @@ async function createDispatchRoute(shipmentId: number, fac: any, kg: number) {
   const veh = (await query<any>("SELECT * FROM vehicles WHERE status='idle' AND capacity_kg >= $1 ORDER BY (hub_id = $2) DESC, capacity_kg LIMIT 1", [kg, sh.hub_id]))[0]
     ?? (await query<any>("SELECT * FROM vehicles WHERE status='idle' ORDER BY capacity_kg DESC LIMIT 1"))[0];
   if (!veh) return null;
-  const km = roadKm(sh, fac);
+  const leg = roadLookup(sh, fac);
+  const km = leg.km;
   const fuel = km * (veh.fuel_l_per_km || 0);
   const route = await insert<any>("routes", {
     code: await nextCode("routes", "R", 5000), vehicle_id: veh.id, kind: "dispatch", status: "planned",
-    total_km: round(km, 2), baseline_km: round(km, 2), duration_min: round((km / AVG_SPEED_KMH) * 60, 0), fuel_l: round(fuel, 2),
+    total_km: round(km, 2), baseline_km: round(km, 2), duration_min: round(leg.minutes, 0), fuel_l: round(fuel, 2),
     co2_kg: round(transportCo2(km), 1), cost_inr: round(transportCost(km), 0), opt_score: null, solver: "direct",
     explanation: `Dispatch of ${round(kg, 0)} kg from ${sh.hub_name} to ${fac.label} (${fac.name}) as selected by the destination optimizer.`,
   });

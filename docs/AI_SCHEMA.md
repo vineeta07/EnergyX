@@ -132,7 +132,7 @@ Weighted utility over M4 predictions + distance/cost/CO₂. It needs **real faci
 | `gate_fee_inr_per_t` | |
 
 ### M6 · Route optimization ✅ (no training data needed)
-OR-Tools VRP. It needs **real fleet and road inputs**: vehicle capacities, depot locations, pickup time windows, and real road distances (Amazon Location Service / OSRM instead of great-circle × 1.25).
+OR-Tools VRP. It needs **real fleet and road inputs**: vehicle capacities, depot locations, pickup time windows, and real road distances. ✅ Now from OpenStreetMap via OSRM, cached per network point pair.
 
 ---
 

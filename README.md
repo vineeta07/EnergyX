@@ -81,6 +81,20 @@ Reset the demo data:
 cd server && npx tsx src/database/seed.ts --reset
 ```
 
+## Tests
+
+```bash
+cd server && npm test
+```
+```bash
+cd ai-service && .venv/Scripts/python -m unittest discover -s tests -t .
+```
+```bash
+cd ai-service && .venv/Scripts/python -m ml.evaluation.vision_eval --per-dataset 300
+```
+
+The first two run in CI (`.github/workflows/ci.yml`) along with typechecks and `next build`. The third is a manual real-photo vision evaluation; it needs the datasets in `ml/data/datasets/`.
+
 ## Demo script (2 minutes)
 1. **Overview:** KPIs, Sankey (source → stream → pathway → outcome), live map with moving trucks, AI decision cards, predicted vs actual.
 2. **Run Full Optimization:** watch the 11 stages stream in.
@@ -89,8 +103,9 @@ cd server && npx tsx src/database/seed.ts --reset
    - the "why" bullets and decision drivers
    - the ranking of every facility
    - approve or override with a reason
-4. **AI Models:** pipeline, metrics vs baselines, feedback rows waiting for the next run. Press **Retrain**.
-5. **Assistant:** ask "Why did the AI select Facility B?"
+4. **City Planner:** MCD's current zone→plant assignment vs the optimized one (+152 MWh/day, −633 TPD landfilled). Toggle the published expansions.
+5. **AI Models:** pipeline, metrics vs baselines, feedback rows waiting for the next run. Press **Retrain**.
+6. **Assistant:** ask "Why did the AI select Tehkhand WtE?"
 
 ## Roles
 | Role | Can |
@@ -195,5 +210,5 @@ Contracts **freeze at the start of phase 3**. After that, only fixes go in.
   - OpenStreetMap coordinates.
 - **Simulated data (labelled):** day-to-day tonnage around each zone's published average, individual transfer loads, hubs, trucks, per-load composition variation and plant meter readings. Meter readings are calibrated so each plant averages its published MW ÷ TPD. No public Delhi source publishes these at that granularity. Every generated row is flagged `is_simulated`.
 - **Waste photos:** classified by the pretrained `Darshan764/waste-classification-v2` model. On independent real photos it scores 62–79% (79–91% when confident); see `docs/AI_SCHEMA.md`.
-- **Distances:** road distances are great-circle distance × 1.25 locally. Amazon Location Service replaces this in AWS mode.
+- **Distances:** real road distances and drive times from OpenStreetMap via OSRM, cached in `road_distances`. Points without a cached pair fall back to great-circle × 1.25. Amazon Location Service would replace OSRM in AWS mode.
 - **Emission factors:** 0.71 kg CO₂/kWh grid and 0.45 kg CO₂e/kg organic landfill. These are shown on `/impact`. Replace them with official factors for production.

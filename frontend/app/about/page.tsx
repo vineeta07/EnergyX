@@ -34,7 +34,7 @@ const AWS = [
   ["EventBridge", "Domain-event bus + scheduled retraining / sweeps"],
   ["SQS", "Async work queues (training, notifications)"],
   ["ElastiCache Redis", "KPI cache, token revocation, rate-limit counters"],
-  ["Amazon Location Service", "Map tiles + route matrix (replaces great-circle × road factor)"],
+  ["Amazon Location Service", "Map tiles + route matrix (replaces the OSRM / OpenStreetMap road matrix used locally)"],
   ["IoT Core", "Vehicle GPS & facility meter telemetry (replaces demo simulator)"],
   ["CloudWatch", "Logs, metrics, model-drift alarms"],
 ];

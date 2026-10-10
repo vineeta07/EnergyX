@@ -1,6 +1,6 @@
 # WattCycle — Detailed User & System Guide
 
-> **Data note.** The network is real Delhi: 12 MCD zones, 4 WtE plants, 2 landfills, 6 MRFs and 1 biomethanation plant, all from DPCC/MCD and published reports. Day-to-day operations (daily tonnage, truck loads, meter readings) are simulated around those published averages. Some examples below still use the older demo names (Restaurant ABC, Facility A/B/C). The flows and functions are identical; only the data changed.
+> **Data note.** The network is real Delhi: 12 MCD zones, 4 WtE plants, 2 landfills, 6 MRFs and 1 biomethanation plant, all from DPCC/MCD and published reports. Road distances come from OpenStreetMap (OSRM). Day-to-day operations (daily tonnage, truck loads, meter readings) are simulated around those published averages.
 
 This guide follows every user from login to logout. For each screen and button it covers:
 - what the user sees and does;
@@ -15,7 +15,7 @@ Read it top to bottom once. After that, use it as a reference.
 **Contents**
 1. [Big picture](#1-big-picture)
 2. [Signing in and what every user shares](#2-signing-in-and-what-every-user-shares)
-3. [Waste Generator](#3-waste-generator-eg-restaurant-abc)
+3. [Waste Generator](#3-waste-generator-eg-mcd-central-zone-office)
 4. [Fleet Operator](#4-fleet-operator)
 5. [Processing Hub Operator](#5-processing-hub-operator)
 6. [Energy Facility](#6-energy-facility-eg-facility-b)
@@ -120,7 +120,7 @@ Under the KPIs, **`RoleQueue`** shows a work queue specific to the user's role. 
 
 ---
 
-## 3. Waste Generator (e.g. Restaurant ABC)
+## 3. Waste Generator (e.g. MCD Central Zone office)
 
 **Demo account:** `generator@wattcycle.demo`. **Navigation:** Overview, Waste Network, Collection, Facilities, Energy, Alerts, Settings.
 
@@ -288,9 +288,9 @@ Each stream's predicted kWh and 90% interval, the actual kWh once the facility r
 
 ---
 
-## 6. Energy Facility (e.g. Facility B)
+## 6. Energy Facility (e.g. Tehkhand WtE)
 
-**Demo account:** `facility@wattcycle.demo` (linked to Facility B). **Navigation:** Overview, AI Engine, Facilities, Energy, Analytics, AI Models, Alerts, Settings.
+**Demo account:** `facility@wattcycle.demo` (linked to Tehkhand WtE). **Navigation:** Overview, AI Engine, Facilities, Energy, Analytics, AI Models, Alerts, Settings.
 
 ### 6.1 Dashboard queue
 **"Loads awaiting output report"** comes from `GET /api/facilities/:myId` → `awaiting_output`: predictions for this facility that have no meter reading yet.
@@ -372,6 +372,23 @@ The overlay (`features/demo/DemoOverlay.tsx`) is driven entirely by `DemoStage` 
 
 ---
 
+## 8b. City Allocation Planner (`/planner`, admin / hub / fleet)
+
+The planner answers a city-level question: how should Delhi's 11,000 TPD be split across its plants?
+
+1. `POST /api/planner/city {scenarios}` → `api/planner.ts` builds the inputs from the database:
+   - each zone's real TPD and its current DPCC destinations;
+   - each facility's real capacity and yield, where yield = MW × 24 ÷ TPD;
+   - OSRM road distances from every zone to every facility.
+2. Scenarios add the published expansions: Okhla to 2,950 TPD / 40 MW, Tehkhand to 3,000 TPD / 45 MW, new Ghazipur and Narela-Bawana plants, and Ghogha biomethanation coming online.
+3. The AI service `/v1/plan-city` → `ml/optimization/city_plan.py` solves a linear program (OR-Tools GLOP).
+   - **Objective:** maximize electricity minus haulage diesel energy (0.33 kWh per tonne-km).
+   - **Constraints:** plant capacities, and segregated organics only for biomethanation.
+   - **Overflow:** landfill.
+4. It compares the result with **MCD's current practice**: each zone split equally over its listed destinations, overflow to the nearest landfill.
+   - This baseline processes ≈7,000 TPD, close to the 7,200 TPD DPCC reports.
+   - Re-assigning zones within today's plants yields **+152 MWh/day (+8%)**, **−633 TPD to landfill** and **−19% haulage**.
+
 ## 9. WattCycle Intelligence (assistant)
 
 Opened from the top bar on any page.
@@ -385,7 +402,7 @@ Opened from the top bar on any page.
 | Tool | API route | Answers |
 |---|---|---|
 | `get_kpis` | `/internal/tools/kpis` | Network snapshot |
-| `get_facility_decisions` | `/internal/tools/decisions?facility=B` | "Why did the AI select Facility B?" (ranking table + weights) |
+| `get_facility_decisions` | `/internal/tools/decisions?facility=Tehkhand` | "Why did the AI select Tehkhand WtE?" (ranking table + weights) |
 | `get_energy_generation` | `/internal/tools/energy?days&stream` | "How much energy did organic waste generate this month?" |
 | `get_co2_avoided` | `/internal/tools/co2?days` | "How much CO₂ did we avoid this week?" (grid + landfill − transport) |
 | `get_facility_capacity` | `/internal/tools/facilities` | "Which facility has the most available capacity?" |
@@ -573,7 +590,7 @@ Environment configuration. Production fails fast if `JWT_SECRET` or `SERVICE_KEY
   6. **decision drivers** = each criterion's share of the winner's score;
   7. `explain()` writes the headline, bullets (energy gain vs runner-up, efficiency difference, compatibility, utilization, extra transport cost, historical yield), per-facility comparisons, the "vs nearest facility" sentence, and the net energy advantage.
 - **`routing.optimize()`:**
-  1. builds a distance matrix (great-circle × road factor);
+  1. uses the real road distance and drive-time matrices sent by the API (OSRM), or builds a great-circle × road-factor matrix if none were sent;
   2. computes the **baseline** (individual round trips);
   3. `_ortools()` sets up: arc cost = metres; fixed cost per vehicle (encourages consolidation); capacity dimension (remaining capacity); time dimension (travel + 8 min service, soft upper bound on each window); **drop penalties by urgency**; PATH_CHEAPEST_ARC + GUIDED_LOCAL_SEARCH, 2 s limit. Falls back to `_heuristic()` (nearest neighbour + 2-opt);
   4. per route it returns km, duration, ETAs, load, savings %, **score** = 100 × (0.5 × min(1, savings/40%) + 0.25 × fill + 0.25 × on-time share), and the explanation.
@@ -629,14 +646,14 @@ users ─< waste_sources ─< waste_records          (daily generation; pickup_i
 model_versions ─< training_runs        alerts   notifications   audit_logs   events   system_settings
 ```
 
-The life of 1 kg of food waste from Restaurant ABC:
+The life of 1 kg of food waste from the MCD Central Zone:
 1. It is part of a daily `waste_records` row, and the forecaster learns from it.
 2. A **pickup_request** (REQUESTED) is created, by the generator or automatically by the fill-level sweep.
 3. The VRP puts it on a **route** (ASSIGNED). The truck leaves (EN_ROUTE) and passes the stop (COLLECTED).
 4. At the hub it becomes part of a **shipment**. The weighbridge reading is recorded, and a new `waste_records` row stores the actual quantity collected.
 5. The **classification** says it is about 63% likely to sit in the organic fraction. The operator confirms or corrects; a correction becomes a training label.
 6. **Energy predictions** for each pathway are made. The **ai_decision** ranks the facilities, and the operator approves.
-7. A **dispatch route** carries it to Facility B. The facility meter records **energy_outputs**.
+7. A **dispatch route** carries it to Tehkhand WtE. The facility meter records **energy_outputs**.
 8. A **feedback_records** row stores predicted vs actual. The next **training_run** consumes it, and a new **model_version** goes live. The next kilogram is ranked with a better model.
 
 ---

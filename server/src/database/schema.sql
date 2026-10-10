@@ -375,3 +375,13 @@ ALTER TABLE waste_sources ADD COLUMN IF NOT EXISTS data_source TEXT;
 ALTER TABLE facilities ADD COLUMN IF NOT EXISTS mw DOUBLE PRECISION;
 ALTER TABLE facilities ADD COLUMN IF NOT EXISTS notes TEXT;
 ALTER TABLE facilities ADD COLUMN IF NOT EXISTS data_source TEXT;
+
+-- v4: real road distances (OSRM / OpenStreetMap) between fixed network points
+CREATE TABLE IF NOT EXISTS road_distances (
+  a_key   TEXT NOT NULL,
+  b_key   TEXT NOT NULL,
+  km      DOUBLE PRECISION NOT NULL,
+  minutes DOUBLE PRECISION NOT NULL,
+  source  TEXT NOT NULL DEFAULT 'osrm',
+  PRIMARY KEY (a_key, b_key)
+);

@@ -18,7 +18,22 @@ export function haversineKm(a: { lat: number; lng: number }, b: { lat: number; l
   return 2 * R * Math.asin(Math.sqrt(h));
 }
 
-export const roadKm = (a: { lat: number; lng: number }, b: { lat: number; lng: number }) => haversineKm(a, b) * ROAD_FACTOR;
+// Real road distances between fixed network points (OSRM on OpenStreetMap), loaded by services/roads.ts.
+// Points without a cached entry (e.g. a newly registered source) fall back to great-circle x ROAD_FACTOR.
+const roadCache = new Map<string, { km: number; minutes: number }>();
+export const pointKey = (p: { lat: number; lng: number }) => `${Number(p.lat).toFixed(4)},${Number(p.lng).toFixed(4)}`;
+export function setRoadDistance(a: string, b: string, km: number, minutes: number) {
+  roadCache.set(`${a}|${b}`, { km, minutes });
+}
+export function roadLookup(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
+  if (pointKey(a) === pointKey(b)) return { km: 0, minutes: 0, source: "osrm" as const };
+  const hit = roadCache.get(`${pointKey(a)}|${pointKey(b)}`);
+  if (hit) return { ...hit, source: "osrm" as const };
+  const km = haversineKm(a, b) * ROAD_FACTOR;
+  return { km, minutes: (km / AVG_SPEED_KMH) * 60, source: "estimate" as const };
+}
+export const roadKm = (a: { lat: number; lng: number }, b: { lat: number; lng: number }) => roadLookup(a, b).km;
+export const roadCacheSize = () => roadCache.size;
 
 /** Point at a given road distance (km) and bearing (deg) from origin. */
 export function offsetByRoadKm(origin: { lat: number; lng: number }, road: number, bearingDeg: number) {

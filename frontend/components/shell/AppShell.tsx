@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   LayoutDashboard, Factory, Truck, Route, Warehouse, BrainCircuit, Zap, BarChart3, Cpu, Bell, Settings, ShieldCheck,
-  LogOut, Sparkles, Play, Menu, X, Recycle,
+  LogOut, Sparkles, Play, Menu, X, Recycle, Map as MapIcon,
 } from "lucide-react";
 import { Logo } from "./Logo";
 import { useAuth, ROLE_LABEL, type Role } from "@/store/auth";
@@ -25,6 +25,7 @@ const NAV: NavItem[] = [
   { href: "/routes", label: "Routes", icon: Route, roles: ["fleet", "admin"] },
   { href: "/hub", label: "Processing Hub", icon: Warehouse, roles: ["hub", "admin"] },
   { href: "/ai-decisions", label: "AI Engine", icon: BrainCircuit, roles: ["hub", "admin", "facility"] },
+  { href: "/planner", label: "City Planner", icon: MapIcon, roles: ["admin", "hub", "fleet"] },
   { href: "/facilities", label: "Facilities", icon: Recycle },
   { href: "/energy", label: "Energy", icon: Zap },
   { href: "/analytics", label: "Analytics", icon: BarChart3, roles: ["admin", "fleet", "hub", "facility"] },

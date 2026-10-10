@@ -94,7 +94,7 @@ export function DecisionView({ d, outcome, compact }: { d: any; outcome?: { pred
                 <Td><Link href={`/facilities/${r.facility_id}`} className="text-ink hover:text-accent">{r.label}</Link> <span className="text-xs text-ink-3">{r.name}</span>
                   {r.facility_id === d.chosen_facility_id && <Badge tone="green" className="ml-2"><Trophy className="size-3" />AI choice</Badge>}
                   {!r.eligible && <div className="text-[11px] text-crit">Excluded: {r.exclusion_reason}</div>}</Td>
-                <Td right mono>{n(r.distance_km, 1)} km</Td>
+                <Td right mono>{n(r.distance_km, 1)} km{r.drive_min != null && <div className="text-[10px] text-ink-3">{n(r.drive_min)} min by road</div>}</Td>
                 <Td right mono>{pct(r.utilization_pct)}</Td>
                 <Td right mono>{pct(r.compatibility_pct)}</Td>
                 <Td right mono className="text-ink">{kwh(r.predicted_kwh)}</Td>

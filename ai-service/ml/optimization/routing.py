@@ -23,13 +23,17 @@ def _matrix(points, road_factor):
     return [[_hav(p, q) * road_factor for q in points] for p in points]
 
 
-def optimize(depot: dict, vehicles: list[dict], stops: list[dict], road_factor: float = 1.25, speed_kmh: float = 28.0, time_limit_s: int = 2) -> dict:
+def optimize(depot: dict, vehicles: list[dict], stops: list[dict], road_factor: float = 1.25, speed_kmh: float = 28.0, time_limit_s: int = 2,
+             distance_matrix_km: list[list[float]] | None = None, duration_matrix_min: list[list[float]] | None = None, distance_source: str | None = None) -> dict:
     points = [depot] + stops
-    D = _matrix(points, road_factor)
+    n = len(points)
+    real = bool(distance_matrix_km) and len(distance_matrix_km) == n and all(len(r) == n for r in distance_matrix_km)
+    D = distance_matrix_km if real else _matrix(points, road_factor)
+    T = duration_matrix_min if real and duration_matrix_min and len(duration_matrix_min) == n else [[d / speed_kmh * 60 for d in row] for row in D]
     baseline = sum(2 * D[0][i] for i in range(1, len(points)))
     try:
-        routes, unassigned, solver = _ortools(D, vehicles, stops, speed_kmh, time_limit_s), None, "ortools-cvrptw-gls"
-        routes, unassigned = routes
+        routes, unassigned = _ortools(D, T, vehicles, stops, time_limit_s)
+        solver = "ortools-cvrptw-gls"
     except ImportError:
         routes, unassigned, solver = _heuristic(D, vehicles, stops), [], "nearest-neighbour+2opt"
     out = []
@@ -41,10 +45,10 @@ def optimize(depot: dict, vehicles: list[dict], stops: list[dict], road_factor: 
         km = sum(D[a][b] for a, b in zip(path, path[1:]))
         etas, t = [], 0.0
         for a, b in zip(path, path[1:-1]):
-            t += D[a][b] / speed_kmh * 60
+            t += T[a][b]
             etas.append(round(t, 1))
             t += SERVICE_MIN
-        dur = km / speed_kmh * 60 + SERVICE_MIN * len(seq)
+        dur = sum(T[a][b] for a, b in zip(path, path[1:])) + SERVICE_MIN * len(seq)
         load = sum(stops[i - 1]["demand_kg"] for i in seq)
         base = sum(2 * D[0][i] for i in seq)
         savings = 1 - km / base if base > 0 else 0
@@ -60,11 +64,11 @@ def optimize(depot: dict, vehicles: list[dict], stops: list[dict], road_factor: 
         out.append({"vehicle_id": v["id"], "stop_ids": [stops[i - 1]["id"] for i in seq], "total_km": round(km, 2), "duration_min": round(dur, 1),
                     "load_kg": load, "baseline_km": round(base, 2), "savings_pct": round(savings * 100, 1), "opt_score": round(score), "explanation": expl, "etas_min": etas})
     total = sum(r["total_km"] for r in out)
-    return {"solver": solver, "routes": out, "baseline_km": round(baseline, 2), "total_km": round(total, 2),
+    return {"solver": solver, "distance_source": (distance_source or "osrm") if real else "great-circle x road factor", "routes": out, "baseline_km": round(baseline, 2), "total_km": round(total, 2),
             "savings_pct": round((1 - total / baseline) * 100, 1) if baseline else 0, "unassigned": unassigned or []}
 
 
-def _ortools(D, vehicles, stops, speed_kmh, time_limit_s):
+def _ortools(D, T, vehicles, stops, time_limit_s):
     from ortools.constraint_solver import pywrapcp, routing_enums_pb2
 
     n, nv = len(D), len(vehicles)
@@ -86,7 +90,7 @@ def _ortools(D, vehicles, stops, speed_kmh, time_limit_s):
 
     def time_cb(i, j):
         a, b = mgr.IndexToNode(i), mgr.IndexToNode(j)
-        return int(D[a][b] / speed_kmh * 60) + (SERVICE_MIN if a != 0 else 0)
+        return int(T[a][b]) + (SERVICE_MIN if a != 0 else 0)
 
     tcb = routing.RegisterTransitCallback(time_cb)
     routing.AddDimension(tcb, 120, 24 * 60, True, "Time")

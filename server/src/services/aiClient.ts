@@ -36,5 +36,6 @@ export const ai = {
   rankFacilities: (body: unknown) => call<any>("/v1/rank-facilities", body),
   optimizeRoutes: (body: unknown) => call<any>("/v1/optimize-routes", body, 30_000),
   train: (body: unknown) => call<any>("/v1/train", body, 10_000),
+  planCity: (body: unknown) => call<any>("/v1/plan-city", body, 30_000),
   assistant: (body: unknown) => call<any>("/v1/assistant/chat", body, 90_000),
 };

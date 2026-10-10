@@ -17,11 +17,11 @@ from fastapi.responses import JSONResponse
 
 from app import assistant
 from app.config import SERVICE_KEY
-from app.schemas import (AssistantIn, ClassifyImageIn, ClassifyIn, ForecastIn, PathwayIn, RankIn, RoutesIn, TrainIn)
+from app.schemas import (AssistantIn, ClassifyImageIn, ClassifyIn, ForecastIn, PathwayIn, PlanIn, RankIn, RoutesIn, TrainIn)
 from ml.inference import predict, vision
 from ml.inference.predict import ModelNotReady
 from ml.models import registry
-from ml.optimization import ranking, routing
+from ml.optimization import city_plan, ranking, routing
 from ml.pipelines import train as training
 
 app = FastAPI(title="WattCycle AI Service", version="1.0.0")
@@ -68,7 +68,7 @@ async def timing(request: Request, call_next):
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "models": {**registry.status(), "vision": {"loaded": vision.info()["loaded"], "version": vision.MODEL_ID if vision.available() else None, "algorithm": vision.info()["architecture"]}}}
+    return {"status": "ok", "models": {**registry.status(), "vision": {"loaded": vision.available(), "version": vision.MODEL_ID if vision.available() else None, "algorithm": vision.info()["architecture"]}}}
 
 
 @app.post("/v1/forecast", dependencies=[Depends(service_auth)])
@@ -100,7 +100,13 @@ def rank(body: RankIn):
 
 @app.post("/v1/optimize-routes", dependencies=[Depends(service_auth)])
 async def optimize_routes(body: RoutesIn):
-    return await run_in_threadpool(routing.optimize, body.depot.model_dump(), [v.model_dump() for v in body.vehicles], [s.model_dump() for s in body.stops], body.road_factor, body.speed_kmh)
+    return await run_in_threadpool(routing.optimize, body.depot.model_dump(), [v.model_dump() for v in body.vehicles], [s.model_dump() for s in body.stops],
+                                   body.road_factor, body.speed_kmh, 2, body.distance_matrix_km, body.duration_matrix_min, body.distance_source)
+
+
+@app.post("/v1/plan-city", dependencies=[Depends(service_auth)])
+async def plan_city(body: PlanIn):
+    return await run_in_threadpool(city_plan.plan, [z.model_dump() for z in body.zones], [f.model_dump() for f in body.facilities], body.dist)
 
 
 @app.post("/v1/train", dependencies=[Depends(service_auth)], status_code=202)

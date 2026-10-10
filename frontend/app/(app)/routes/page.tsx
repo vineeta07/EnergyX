@@ -90,7 +90,7 @@ export default function Routes() {
               </button>
             ))}
           </Panel>
-          <div className="flex flex-wrap gap-2 text-[11px] text-ink-3"><Badge>Distances: great-circle × 1.25 road factor</Badge><Badge>Amazon Location route matrix in AWS mode</Badge></div>
+          <div className="flex flex-wrap gap-2 text-[11px] text-ink-3"><Badge>Road distances &amp; drive times: OpenStreetMap via OSRM</Badge><Badge>Amazon Location route matrix in AWS mode</Badge></div>
         </div>
       </div>
     </div>
