@@ -65,7 +65,7 @@ The closed loop, and the Node function that drives each step (all in `server/src
 
 Every event is saved in the `events` table and broadcast over the WebSocket. The browser uses each event to refresh the screens that changed (`frontend/hooks/useLiveSocket.ts`).
 
----
+-----
 
 ## 2. Signing in and what every user shares
 
