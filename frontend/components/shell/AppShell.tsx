@@ -6,7 +6,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   LayoutDashboard, Factory, Truck, Route, Warehouse, Scale, Zap, BarChart3, Cpu, Bell, Settings, ShieldCheck,
   LogOut, MessageSquareText, Play, Menu, X, Recycle, Map as MapIcon, CircleHelp, Shirt, BatteryCharging,
-  House, ScanLine, Lightbulb, Trophy,
+  House, ScanLine, Lightbulb, Trophy, MapPin, Megaphone,
 } from "lucide-react";
 import { Logo } from "./Logo";
 import { LangSwitcher, ThemeToggle } from "./Prefs";
@@ -31,6 +31,9 @@ const RESIDENT_NAV: NavItem[] = [
   { href: "/resin", label: "Plastic codes", icon: Recycle },
   { href: "/ideas", label: "Upcycling ideas", icon: Lightbulb },
   { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
+  { href: "/quiz", label: "Daily quiz", icon: CircleHelp },
+  { href: "/dropoff", label: "Where to take it", icon: MapPin },
+  { href: "/report", label: "Report a problem", icon: Megaphone },
 ];
 const NAV: NavItem[] = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },

@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { ChevronRight, Lightbulb, Recycle, Trash2 } from "lucide-react";
+import { ChevronRight, Lightbulb, MapPin, Recycle, Trash2 } from "lucide-react";
 import { t } from "@/lib/i18n";
 import { BIN, MATERIAL_LABEL, VERDICT, type Item } from "@/lib/resident";
 import { IDEAS, IDEA_CATEGORY } from "@/lib/ideas";
@@ -10,6 +10,8 @@ import { MaterialDot } from "./ui";
 export function ItemVerdict({ item, photo }: { item: Item; photo?: string | null }) {
   const v = VERDICT[item.verdict];
   const ideas = item.ideas ? IDEAS.filter((i) => i.category === item.ideas).length : 0;
+  // Recyclables and things worth remaking have somewhere better to go than the bin.
+  const dropoff = (item.verdict === "recycle" || item.verdict === "upcycle") && item.material !== "organic";
   return (
     <div className="overflow-hidden rounded-2xl border border-line bg-panel shadow-[var(--shadow)]">
       <div className="flex items-center gap-4 p-5" style={{ background: `color-mix(in srgb, ${v.color} 12%, var(--panel))` }}>
@@ -29,11 +31,16 @@ export function ItemVerdict({ item, photo }: { item: Item; photo?: string | null
           <div className="rounded-xl bg-raised/70 p-3"><dt className="text-xs text-ink-3">{t("Why")}</dt><dd data-notr className="mt-0.5 leading-relaxed text-ink-2">{item.why}</dd></div>
           <div className="rounded-xl bg-raised/70 p-3"><dt className="text-xs text-ink-3">{t("Before you bin it")}</dt><dd data-notr className="mt-0.5 leading-relaxed text-ink-2">{item.prep}</dd></div>
         </dl>
-        {(item.resin || ideas > 0) && (
+        {(item.resin || ideas > 0 || dropoff) && (
           <div className="flex flex-wrap gap-2">
             {item.resin && (
               <Link href={`/resin?code=${item.resin}`} className="inline-flex items-center gap-2 rounded-full border border-line-2 px-3.5 py-2 text-sm text-ink hover:border-ink-3">
                 <Recycle className="size-4 text-accent" />{t("Probably plastic code {n}. Check the triangle.", { n: item.resin })}<ChevronRight className="size-4 text-ink-3" />
+              </Link>
+            )}
+            {dropoff && (
+              <Link href={`/dropoff?m=${item.material}`} className="inline-flex items-center gap-2 rounded-full border border-line-2 px-3.5 py-2 text-sm text-ink hover:border-ink-3">
+                <MapPin className="size-4 text-accent" />{t("Where to take it")}<ChevronRight className="size-4 text-ink-3" />
               </Link>
             )}
             {ideas > 0 && (

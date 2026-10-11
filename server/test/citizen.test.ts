@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { ITEMS, RESINS, LEVELS, POINTS, DEMO_BASELINE, levelFor } from "../src/services/citizen.ts";
+import { ITEMS, RESINS, LEVELS, POINTS, DEMO_BASELINE, REPORT_KINDS, QUIZ_LENGTH, levelFor, quizItems } from "../src/services/citizen.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -58,4 +58,18 @@ test("levels start at zero, rise in order and report progress to the next one", 
   assert.equal(top.n, LEVELS.length);
   assert.equal(top.next_at, null);
   assert.equal(top.progress, 1);
+});
+
+test("the daily quiz holds five different items, the same all day and new the next day", () => {
+  const a = quizItems(7, "2026-10-11");
+  assert.equal(a.length, QUIZ_LENGTH);
+  assert.equal(new Set(a.map((i) => i.key)).size, QUIZ_LENGTH);
+  assert.deepEqual(quizItems(7, "2026-10-11").map((i) => i.key), a.map((i) => i.key));
+  assert.notDeepEqual(quizItems(7, "2026-10-12").map((i) => i.key), a.map((i) => i.key));
+  assert.notDeepEqual(quizItems(8, "2026-10-11").map((i) => i.key), a.map((i) => i.key));
+});
+
+test("a full quiz is worth at most what a day of reports and scans is, and only burning is critical", () => {
+  assert.ok(POINTS.quiz_right * QUIZ_LENGTH <= POINTS.scan + POINTS.new_item);
+  for (const [k, v] of Object.entries(REPORT_KINDS)) assert.equal(v.severity === "critical", k === "burning", k);
 });

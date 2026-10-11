@@ -1,6 +1,10 @@
 import bcrypt from "bcryptjs";
 import { query, one, insert } from "../database/db.ts";
 import { HttpError } from "../middleware/http.ts";
+import { ZONES } from "../database/realdata/delhi.ts";
+import { haversineKm } from "../utils/geo.ts";
+import { raiseAlert } from "./alerts.ts";
+import { putObject } from "./storage.ts";
 
 /**
  * Resident app: what a household item is, which bin it goes in, and a points tally.
@@ -69,7 +73,7 @@ export const RESINS = [
   { code: 7, short: "Other", name: "Mixed and other plastics", found: "Chips and biscuit packets, tetra packs, water-cooler jars", recycled: "rarely", reuse: "Depends on the item.", note: "Layers of different plastics and foil cannot be separated. Most of it is burned for energy." },
 ] as const;
 
-export const POINTS = { scan: 10, new_item: 5, resin: 5, guide: 5 };
+export const POINTS = { scan: 10, new_item: 5, resin: 5, guide: 5, quiz_right: 2, report: 5 };
 export const DAILY_SCAN_CAP = 15;
 export const LEVELS = [
   { n: 1, name: "Seed", at: 0 }, { n: 2, name: "Sprout", at: 50 }, { n: 3, name: "Seedling", at: 150 }, { n: 4, name: "Sapling", at: 300 },
@@ -91,7 +95,10 @@ export function levelFor(points: number) {
 const DAY = "(created_at AT TIME ZONE 'Asia/Kolkata')::date";
 const TODAY = "(now() AT TIME ZONE 'Asia/Kolkata')::date";
 
-export const catalogue = () => ({ items: ITEMS, resins: RESINS, levels: LEVELS, points: POINTS, daily_scan_cap: DAILY_SCAN_CAP });
+export const catalogue = () => ({
+  items: ITEMS, resins: RESINS, levels: LEVELS, points: POINTS, daily_scan_cap: DAILY_SCAN_CAP,
+  zones: zones(), report_kinds: Object.entries(REPORT_KINDS).map(([key, k]) => ({ key, title: k.title })), reports_per_day: REPORTS_PER_DAY,
+});
 
 // ------------------------------------------------------------------ profile
 function streakOf(days: string[], today: string) {
@@ -110,6 +117,10 @@ export async function profile(userId: number) {
       COUNT(DISTINCT item) FILTER (WHERE kind='resin')::int AS resins,
       COUNT(DISTINCT item) FILTER (WHERE kind='guide')::int AS guides,
       COUNT(DISTINCT material) FILTER (WHERE kind='scan')::int AS materials,
+      COUNT(*) FILTER (WHERE kind='quiz')::int AS quizzes,
+      COUNT(*) FILTER (WHERE kind='quiz' AND method='5/5')::int AS perfect,
+      COUNT(*) FILTER (WHERE kind='report')::int AS reports,
+      COUNT(*) FILTER (WHERE kind='quiz' AND ${DAY} = ${TODAY})::int AS quiz_today,
       COUNT(*) FILTER (WHERE kind='scan' AND ${DAY} = ${TODAY})::int AS scans_today,
       to_char(${TODAY},'YYYY-MM-DD') AS today
     FROM citizen_actions WHERE user_id=$1`, [userId]))!;
@@ -132,7 +143,8 @@ export async function profile(userId: number) {
   return {
     points: tot.points, level: levelFor(tot.points), streak, rank: tot.points > 0 ? rank!.rank : null,
     today: { scans: tot.scans_today, cap: DAILY_SCAN_CAP },
-    counts: { scans: tot.scans, resins: tot.resins, guides: tot.guides, materials: tot.materials },
+    counts: { scans: tot.scans, resins: tot.resins, guides: tot.guides, materials: tot.materials, quizzes: tot.quizzes, reports: tot.reports },
+    quiz_done_today: tot.quiz_today > 0,
     by_material: byMaterial,
     by_verdict: Object.fromEntries(byVerdict.map((v: any) => [v.verdict, v.n])),
     top_items: byItem.map((r: any) => ({ item: r.item, name: ITEM_BY_KEY.get(r.item)?.name ?? r.item, n: r.n })),
@@ -147,6 +159,9 @@ export async function profile(userId: number) {
       badge("codes", "Code reader", "Look up all 7 plastic codes", tot.resins, 7),
       badge("maker", "Maker", "Read 3 upcycling ideas", tot.guides, 3),
       badge("week", "Week streak", "Sort something 7 days in a row", streak, 7),
+      badge("quiz", "Quiz regular", "Finish the daily quiz 5 times", tot.quizzes, 5),
+      badge("perfect", "Full marks", "Get all 5 right in a daily quiz", tot.perfect, 1),
+      badge("neighbour", "Good neighbour", "Report a problem in your area", tot.reports, 1),
     ],
   };
 }
@@ -204,6 +219,119 @@ export async function leaderboard(range: "week" | "all", userId: number) {
     range,
     rows: rows.map((r, i) => ({ rank: i + 1, id: r.id, name: r.name, points: r.points, items: r.items, level: levelFor(r.total).n, level_name: levelFor(r.total).name, me: r.id === userId, demo: r.organization === DEMO_ORG })),
   };
+}
+
+// ------------------------------------------------------------------ daily quiz
+const todayInDelhi = () => new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+export const QUIZ_LENGTH = 5;
+
+/** Five items for this person today: the same five all day, a different five tomorrow, never the same item twice. */
+export function quizItems(userId: number, day = todayInDelhi()): Item[] {
+  const r = rng(userId * 100_003 + Number(day.replaceAll("-", "")));
+  const pool = [...ITEMS];
+  for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+  return pool.slice(0, QUIZ_LENGTH);
+}
+
+async function quizToday(userId: number) {
+  return one<any>(`SELECT points, method FROM citizen_actions WHERE user_id=$1 AND kind='quiz' AND ${DAY} = ${TODAY}`, [userId]);
+}
+
+export async function quiz(userId: number) {
+  const done = await quizToday(userId);
+  return { day: todayInDelhi(), items: quizItems(userId).map((i) => i.key), done: done ? { score: Number(String(done.method).split("/")[0]), points: done.points } : null, points_per_right: POINTS.quiz_right };
+}
+
+/** Grades today's quiz. Points are given once a day; a second try is graded but earns nothing. */
+export async function submitQuiz(userId: number, answers: Record<string, Bin>) {
+  const items = quizItems(userId);
+  const results = items.map((it) => ({ item: it.key, answer: answers[it.key] ?? null, bin: it.bin, right: answers[it.key] === it.bin }));
+  const score = results.filter((r) => r.right).length;
+  const done = await quizToday(userId);
+  if (done) return { action: null, awarded: 0, profile: await profile(userId), level_up: null, new_badges: [], score, results, already: true };
+  const out = await record(userId, { kind: "quiz", item: todayInDelhi(), material: null, verdict: null, points: score * POINTS.quiz_right, method: `${score}/${QUIZ_LENGTH}` });
+  return { ...out, score, results, already: false };
+}
+
+// ------------------------------------------------------------------ drop-off points
+const DEFAULT_ZONE = "Central Zone"; // the demo resident lives in Lajpat Nagar
+export const zones = () => ZONES.map((z) => ({ name: z.name, ref: z.ref, lat: z.lat, lng: z.lng }));
+
+function nearestZone(p: { lat: number; lng: number }) {
+  return ZONES.reduce((best, z) => (haversineKm(p, z) < haversineKm(p, best) ? z : best), ZONES[0]);
+}
+
+/** What each partner category means for a household. */
+const PARTNER_TAKES: Record<string, string[]> = {
+  textile: ["textile"], glass_container: ["glass"], pet_bottle: ["plastic"], hdpe_container: ["plastic"], cardboard: ["paper"],
+};
+
+/**
+ * Places a resident can take things to, nearest first: material recovery facilities (dry recyclables),
+ * upcycling workshops (clothes, jars, bottles, boxes) and the authorised battery recycler.
+ * Distances are straight-line from the zone's reference locality or the person's own location.
+ */
+export async function dropoffs(at: { lat?: number; lng?: number; zone?: string }) {
+  const here = at.lat != null && at.lng != null ? { lat: at.lat, lng: at.lng } : (ZONES.find((z) => z.name === at.zone) ?? ZONES.find((z) => z.name === DEFAULT_ZONE)!);
+  const zone = at.lat != null && at.lng != null ? nearestZone(here).name : (ZONES.find((z) => z.name === at.zone)?.name ?? DEFAULT_ZONE);
+  const mrfs = await query<any>("SELECT code, label, name, lat, lng, capacity_tpd, status FROM facilities WHERE technology='material_recovery' AND status <> 'offline'");
+  const partners = await query<any>("SELECT code, name, kind, lat, lng, prices, products, is_simulated FROM circular_partners WHERE status='active'");
+  const places = [
+    ...mrfs.map((f) => ({ code: f.code, name: f.label, detail: f.name, kind: "mrf", takes: ["paper", "plastic", "metal"], products: null as string | null, example: false, lat: f.lat, lng: f.lng })),
+    ...partners.map((p) => ({
+      code: p.code, name: String(p.name).split(/\s+[—-]\s+/)[0], detail: String(p.name).replace(/\s+[—-]\s+/, ", "),
+      kind: p.kind === "battery_recycler" ? "battery" : "upcycler",
+      takes: p.kind === "battery_recycler" ? ["battery"] : [...new Set(Object.keys(p.prices ?? {}).flatMap((k) => PARTNER_TAKES[k] ?? []))],
+      products: p.products as string | null, example: !!p.is_simulated, lat: p.lat, lng: p.lng,
+    })),
+  ].map((x) => ({ ...x, km: Math.round(haversineKm(here, x) * 10) / 10 }))
+    .filter((x) => x.km <= 40) // Delhi only; the Panipat cluster takes bulk loads, not households
+    .sort((a, b) => a.km - b.km);
+  return { zone, from: here, places };
+}
+
+// ------------------------------------------------------------------ problem reports
+export const REPORT_KINDS = {
+  overflowing_bin: { title: "Overflowing bin", severity: "warning" },
+  missed_collection: { title: "Missed collection", severity: "warning" },
+  dumping: { title: "Waste dumped in the open", severity: "warning" },
+  burning: { title: "Waste being burned", severity: "critical" },
+  other: { title: "Something else", severity: "info" },
+} as const;
+export type ReportKind = keyof typeof REPORT_KINDS;
+export const REPORTS_PER_DAY = 5;
+
+export async function createReport(userId: number, b: { kind: ReportKind; zone?: string; lat?: number; lng?: number; note?: string }, photo?: { body: Buffer; ext: string; type: string }) {
+  const today = (await one<any>(`SELECT COUNT(*)::int AS n FROM citizen_reports WHERE user_id=$1 AND (created_at AT TIME ZONE 'Asia/Kolkata')::date = ${TODAY}`, [userId]))!.n;
+  if (today >= REPORTS_PER_DAY) throw new HttpError(429, `You can send up to ${REPORTS_PER_DAY} reports a day`);
+  const zone = b.lat != null && b.lng != null ? nearestZone({ lat: b.lat, lng: b.lng }).name : ZONES.find((z) => z.name === b.zone)?.name;
+  if (!zone) throw new HttpError(400, "Pick your area");
+  let image_key: string | null = null;
+  if (photo) {
+    image_key = `uploads/${new Date().toISOString().slice(0, 10)}/${crypto.randomUUID()}.${photo.ext}`;
+    await putObject(image_key, photo.body, photo.type);
+  }
+  const note = b.note?.trim() || null;
+  const k = REPORT_KINDS[b.kind];
+  const rep = await insert<any>("citizen_reports", { user_id: userId, kind: b.kind, zone, lat: b.lat ?? null, lng: b.lng ?? null, note, image_key });
+  const alert = await raiseAlert({
+    severity: k.severity, type: "resident_report", title: `Resident report: ${k.title.toLowerCase()}`,
+    message: `Reported in ${zone}.${note ? ` ${note}` : ""}`, entity_type: "citizen_report", entity_id: rep.id,
+  });
+  await query("UPDATE citizen_reports SET alert_id=$2 WHERE id=$1", [rep.id, alert?.id ?? null]);
+  // Points for the first report of the day only, so reporting stays about the problem.
+  const points = today === 0 ? POINTS.report : 0;
+  const out = await record(userId, { kind: "report", item: b.kind, material: null, verdict: null, points, method: "picked" });
+  return { ...out, report: { ...rep, alert_id: alert?.id ?? null, status: "open" } };
+}
+
+export async function myReports(userId: number) {
+  return query<any>(`SELECT r.id, r.kind, r.zone, r.note, r.image_key IS NOT NULL AS has_photo, r.created_at, COALESCE(a.status, 'open') AS status
+    FROM citizen_reports r LEFT JOIN alerts a ON a.id = r.alert_id WHERE r.user_id=$1 ORDER BY r.created_at DESC, r.id DESC LIMIT 20`, [userId]);
+}
+
+export async function reportPhotoKey(id: number) {
+  return (await one<{ image_key: string | null }>("SELECT image_key FROM citizen_reports WHERE id=$1", [id]))?.image_key ?? null;
 }
 
 // ------------------------------------------------------------------ demo data
@@ -279,6 +407,7 @@ export async function seedResidents() {
 export async function resetDemo(user: { id: number; email: string }) {
   if (user.email.toLowerCase() !== DEMO_EMAIL) throw new HttpError(403, "The demo runs on the demo resident account only");
   await query("DELETE FROM citizen_actions WHERE user_id=$1", [user.id]);
+  await query("DELETE FROM citizen_reports WHERE user_id=$1", [user.id]);
   await writeBaseline(user.id);
   await refreshNeighbours();
   return profile(user.id);

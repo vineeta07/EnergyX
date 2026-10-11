@@ -29,7 +29,7 @@ export default function Leaderboard() {
   const me = rows.find((r) => r.me);
 
   return (
-    <ResidentPage title={t("Leaderboard")} subtitle={t("Points from sorting items, looking up plastic codes and reading ideas.")}
+    <ResidentPage title={t("Leaderboard")} subtitle={t("Points from sorting items, the daily quiz, plastic codes, ideas and reports.")}
       actions={
         <div className="flex rounded-full border border-line-2 bg-panel p-1 text-sm" role="tablist">
           {(["week", "all"] as const).map((r) => (

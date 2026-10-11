@@ -5,7 +5,7 @@ import { api } from "@/lib/api";
 import { ErrorBox, Loading } from "@/components/ui";
 import { cx } from "@/lib/format";
 import { t } from "@/lib/i18n";
-import { MATERIAL_LABEL, useApplyReward, useCatalogue, type Item, type Reward } from "@/lib/resident";
+import { MATERIAL_LABEL, shrink, useApplyReward, useCatalogue, type Item, type Reward } from "@/lib/resident";
 import { ItemVerdict } from "@/features/resident/ItemVerdict";
 import { BigButton, Card, MaterialDot, ResidentPage, showReward } from "@/features/resident/ui";
 import { useResidentDemo } from "@/features/resident/demo";
@@ -19,20 +19,6 @@ type Step =
   | { at: "pick"; note?: string }
   | { at: "guess"; guesses: Guess[]; chosen: Item; unsure: boolean }
   | { at: "done"; reply: LogReply };
-
-/** Phone photos are several MB. The model looks at 224 px, so a 1024 px JPEG loses nothing and uploads fast. */
-async function shrink(file: File): Promise<Blob> {
-  try {
-    const bmp = await createImageBitmap(file, { imageOrientation: "from-image" });
-    const k = Math.min(1, 1024 / Math.max(bmp.width, bmp.height));
-    const c = document.createElement("canvas");
-    c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
-    c.getContext("2d")!.drawImage(bmp, 0, 0, c.width, c.height);
-    return await new Promise<Blob>((ok, no) => c.toBlob((b) => (b ? ok(b) : no(new Error("no blob"))), "image/jpeg", 0.86));
-  } catch {
-    return file; // the server still checks the type
-  }
-}
 
 export default function Scan() {
   const cat = useCatalogue();

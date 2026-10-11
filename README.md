@@ -19,9 +19,12 @@ There is also a **resident app** for households, on the same login (demo account
 - **Scan an item:** take a photo and see what it is, which bin it goes in (wet, dry, hazardous or donate), why, and whether it is recycled, composted, worth upcycling or burned for energy. The photo goes to the same 30-class image model the hub uses. If that model is not installed, the screen falls back to choosing the item from a list, so it always works.
 - **Plastic codes:** tap the number in the triangle (1 to 7) to see what the plastic is, whether it is recycled in practice, and whether it is safe to reuse.
 - **Upcycling ideas:** short how-to guides for bottles, jars, old clothes, cardboard, tins, newspaper and kitchen scraps.
+- **Daily quiz:** five household items a day, pick the right bin for each. Two points per right answer, once a day; the same five all day, new ones tomorrow.
+- **Where to take it:** recycling centres (MRFs), upcycling workshops and the battery recycler nearest to the resident's area or current location, filtered by what they are bringing, with directions.
+- **Report a problem:** an overflowing bin, a missed collection, dumping or burning, with an optional photo. Each report raises an alert on the operators' Alerts screen (burning is critical), where they can open the photo; the resident sees "Sent", "Seen by the team" or "Sorted out" as the operators acknowledge and resolve it.
 - **Points:** every item sorted earns points, with a daily cap. Points grow a plant through seven levels, and there are badges, a daily streak and a neighbourhood leaderboard. The demo neighbours on the leaderboard are simulated.
 
-The item list, plastic codes and scoring live in `server/src/services/citizen.ts`, the API in `server/src/api/citizen.ts`, and the screens in `frontend/app/(app)/{home,scan,resin,ideas,leaderboard}`.
+The item list, plastic codes and scoring live in `server/src/services/citizen.ts`, the API in `server/src/api/citizen.ts`, and the screens in `frontend/app/(app)/{home,scan,resin,ideas,leaderboard,quiz,dropoff,report}`.
 
 The platform does not send waste to the nearest facility. It sends it where it maximizes **useful energy**, net of transport cost, carbon, and capacity.
 
@@ -126,7 +129,7 @@ The first two run in CI (`.github/workflows/ci.yml`) along with typechecks and `
 ## Roles
 | Role | Can |
 |---|---|
-| Resident | Scan or pick an item to see its bin and whether it is recyclable, look up plastic codes, read upcycling ideas, earn points and badges, see the leaderboard |
+| Resident | Scan or pick an item to see its bin and whether it is recyclable, look up plastic codes, read upcycling ideas, play the daily quiz, find drop-off points, report problems in their area, earn points and badges, see the leaderboard |
 | Waste Generator | Register sources (live estimates), see forecasts, request pickups with a quote, track status, view impact |
 | Fleet Operator | Pickup board, run OR-Tools optimization, recalculate, dispatch, mark collected/delivered |
 | Hub Operator | Weighbridge, Analyze Waste, confirm/edit/reject classification (edits become training labels), energy pathways, approve/override destinations |

@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { Award, ChevronRight, Flame, Lightbulb, Recycle, ScanLine, Trophy } from "lucide-react";
+import { Award, ChevronRight, CircleHelp, Flame, Lightbulb, MapPin, Megaphone, Recycle, ScanLine, Trophy } from "lucide-react";
 import { useAuth } from "@/store/auth";
 import { ErrorBox, Loading } from "@/components/ui";
 import { ago, cx, n } from "@/lib/format";
@@ -14,6 +14,9 @@ const ACTIONS = [
   { href: "/resin", icon: Recycle, title: "Plastic codes", body: "What the number in the triangle means" },
   { href: "/ideas", icon: Lightbulb, title: "Upcycling ideas", body: "Things to make from what you would throw away" },
   { href: "/leaderboard", icon: Trophy, title: "Leaderboard", body: "See how your neighbours are doing" },
+  { href: "/quiz", icon: CircleHelp, title: "Daily quiz", body: "Five items, one minute, points for every right bin" },
+  { href: "/dropoff", icon: MapPin, title: "Where to take it", body: "Recycling centres and workshops near you" },
+  { href: "/report", icon: Megaphone, title: "Report a problem", body: "A full bin or a missed pickup in your lane" },
 ];
 
 export default function Home() {
@@ -54,6 +57,17 @@ export default function Home() {
           <p className="mt-2 text-xs text-ink-3">{left > 0 ? t("{n} more scans earn points today.", { n: left }) : t("You have reached today's points limit. Scans still count towards your tally.")}</p>
         </div>
       </Card>
+
+      {!p.quiz_done_today && (
+        <Link href="/quiz" className="group flex items-center gap-4 rounded-2xl border border-gold/40 bg-gold/10 p-4 transition-all hover:-translate-y-0.5">
+          <span className="grid size-11 shrink-0 place-items-center rounded-full bg-panel text-gold"><CircleHelp className="size-5" /></span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[15px] font-medium text-ink">{t("Today's quiz is waiting")}</span>
+            <span className="block text-sm text-ink-2">{t("Five items, one minute. Up to {n} points.", { n: 10 })}</span>
+          </span>
+          <ChevronRight className="size-5 text-ink-3 transition-transform group-hover:translate-x-0.5" />
+        </Link>
+      )}
 
       <div className="grid gap-3 sm:grid-cols-3">
         {ACTIONS.map((a) => (
@@ -103,7 +117,7 @@ export default function Home() {
             {p.recent.map((r) => (
               <li key={r.id} className="flex items-center gap-3 py-2.5 text-sm">
                 <MaterialDot material={r.material} />
-                <span className="min-w-0 flex-1 truncate text-ink">{r.kind === "scan" ? t(r.name) : r.kind === "resin" ? t("Looked up plastic code {n}", { n: r.item }) : t("Read an upcycling idea")}</span>
+                <span className="min-w-0 flex-1 truncate text-ink">{r.kind === "scan" ? t(r.name) : r.kind === "resin" ? t("Looked up plastic code {n}", { n: r.item }) : r.kind === "quiz" ? t("Daily quiz: {s} right", { s: r.method ?? "" }) : r.kind === "report" ? t("Reported a problem") : t("Read an upcycling idea")}</span>
                 {r.verdict && <span className="hidden text-xs sm:block" style={{ color: VERDICT[r.verdict].color }}>{t(VERDICT[r.verdict].title)}</span>}
                 <span className="num w-10 text-right text-xs text-accent">{r.points > 0 ? `+${r.points}` : ""}</span>
                 <span className="w-20 text-right text-xs text-ink-3">{ago(r.created_at)}</span>

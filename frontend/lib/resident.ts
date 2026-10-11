@@ -14,15 +14,22 @@ export interface Badge { key: string; name: string; how: string; have: number; n
 export interface Profile {
   points: number; level: Level; streak: number; rank: number | null;
   today: { scans: number; cap: number };
-  counts: { scans: number; resins: number; guides: number; materials: number };
+  counts: { scans: number; resins: number; guides: number; materials: number; quizzes: number; reports: number };
+  quiz_done_today: boolean;
   by_material: { material: string; n: number }[];
   by_verdict: Record<string, number>;
   top_items: { item: string; name: string; n: number }[];
-  recent: { id: number; kind: "scan" | "resin" | "guide"; item: string; name: string; material: string | null; verdict: Verdict | null; points: number; created_at: string }[];
+  recent: { id: number; kind: "scan" | "resin" | "guide" | "quiz" | "report"; item: string; name: string; material: string | null; verdict: Verdict | null; points: number; method: string | null; created_at: string }[];
   impact: { sorted_kg: number; kept_from_landfill_kg: number };
   badges: Badge[];
 }
-export interface Catalogue { items: Item[]; resins: Resin[]; levels: { n: number; name: string; at: number }[]; points: { scan: number; new_item: number; resin: number; guide: number }; daily_scan_cap: number }
+export interface Zone { name: string; ref: string; lat: number; lng: number }
+export type ReportKind = "overflowing_bin" | "missed_collection" | "dumping" | "burning" | "other";
+export interface Catalogue {
+  items: Item[]; resins: Resin[]; levels: { n: number; name: string; at: number }[];
+  points: { scan: number; new_item: number; resin: number; guide: number; quiz_right: number; report: number }; daily_scan_cap: number;
+  zones: Zone[]; report_kinds: { key: ReportKind; title: string }[]; reports_per_day: number;
+}
 /** What the API sends back after something that can earn points. */
 export interface Reward { awarded: number; profile: Profile; level_up: Level | null; new_badges: Badge[] }
 
@@ -60,3 +67,37 @@ export function useApplyReward() {
 
 /** Read one value from the page address without needing a Suspense boundary. */
 export const param = (name: string) => (typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get(name));
+
+/** The area a resident picked, remembered on this device. The demo account lives in Lajpat Nagar (Central Zone). */
+const ZONE_KEY = "wattcycle-zone";
+export function savedZone(): string {
+  try { return localStorage.getItem(ZONE_KEY) || "Central Zone"; } catch { return "Central Zone"; }
+}
+export function saveZone(z: string) {
+  try { localStorage.setItem(ZONE_KEY, z); } catch { /* storage blocked: keep it for this visit only */ }
+}
+
+/** A short area name for lists: "Rohini Zone (+ part Narela)" reads as "Rohini". */
+export const zoneShort = (z: string) => z.replace(/\s*\(.*\)$/, "").replace(/ Zone$/, "");
+
+/** Bins as answer buttons in the quiz. */
+export const BIN_CHOICE: { bin: Item["bin"]; label: string; color: string }[] = [
+  { bin: "green", label: "Green bin (wet)", color: "var(--accent)" },
+  { bin: "blue", label: "Blue bin (dry)", color: "var(--blue)" },
+  { bin: "red", label: "Hazardous, handed over separately", color: "var(--crit)" },
+  { bin: "donate", label: "Donate or remake", color: "var(--gold)" },
+];
+
+/** Phone photos are several MB. The model looks at 224 px, so a 1024 px JPEG loses nothing and uploads fast. */
+export async function shrink(file: File): Promise<Blob> {
+  try {
+    const bmp = await createImageBitmap(file, { imageOrientation: "from-image" });
+    const k = Math.min(1, 1024 / Math.max(bmp.width, bmp.height));
+    const c = document.createElement("canvas");
+    c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+    c.getContext("2d")!.drawImage(bmp, 0, 0, c.width, c.height);
+    return await new Promise<Blob>((ok, no) => c.toBlob((b) => (b ? ok(b) : no(new Error("no blob"))), "image/jpeg", 0.86));
+  } catch {
+    return file; // the server still checks the type
+  }
+}

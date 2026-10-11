@@ -37,6 +37,13 @@ export const api = {
   put: <T = any>(p: string, b?: unknown) => request<T>("PUT", p, b),
   patch: <T = any>(p: string, b?: unknown) => request<T>("PATCH", p, b),
   upload: <T = any>(p: string, form: FormData) => request<T>("POST", p, form, true),
+  /** A file behind auth (an <img> cannot send the token), as an object URL. */
+  blobUrl: async (p: string) => {
+    const token = useAuth.getState().token;
+    const res = await fetch(`/api${p}`, { headers: token ? { authorization: `Bearer ${token}` } : {} });
+    if (!res.ok) throw new ApiError(res.status, `Request failed (${res.status})`);
+    return URL.createObjectURL(await res.blob());
+  },
 };
 
 /** WebSocket endpoint: explicit env, else same origin (CloudFront/ALB route /ws to the API), else the local API port in dev. */

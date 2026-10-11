@@ -7,6 +7,21 @@ import { Button, Empty, Loading, PageHeader, Panel, Select, SeverityIcon, Status
 import { ago, cx } from "@/lib/format";
 
 import { t, tEnum } from "@/lib/i18n";
+
+/** Residents can attach a photo to a report; operators open it here. */
+function ReportPhoto({ id }: { id: number }) {
+  const [url, setUrl] = useState<string | null>(null);
+  const [state, setState] = useState<"idle" | "loading" | "none">("idle");
+  if (url) return <a href={url} target="_blank" rel="noopener noreferrer"><img src={url} alt={t("Photo from the resident")} className="mt-2 h-32 rounded-md border border-line object-cover" /></a>;
+  if (state === "none") return <p className="mt-2 text-xs text-ink-3">{t("No photo with this report.")}</p>;
+  return (
+    <button className="mt-2 text-xs font-medium text-accent hover:underline" disabled={state === "loading"}
+      onClick={() => { setState("loading"); api.blobUrl(`/resident-reports/${id}/photo`).then(setUrl, () => setState("none")); }}>
+      {state === "loading" ? t("Loading") + "…" : t("View the resident's photo")}
+    </button>
+  );
+}
+
 export default function Alerts() {
   const role = useAuth((s) => s.user?.role);
   const qc = useQueryClient();
@@ -26,6 +41,7 @@ export default function Alerts() {
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2"><span className="text-sm font-medium text-ink">{a.title}</span><span className="text-xs text-ink-3">{tEnum(a.severity)} · {tEnum(a.type)} · {ago(a.created_at)}</span><Status s={a.status} /></div>
                   <p className="mt-1 text-sm text-ink-2">{a.message}</p>
+                  {a.entity_type === "citizen_report" && a.entity_id && <ReportPhoto id={a.entity_id} />}
                   {a.causes?.length > 0 && <div className="mt-2 text-xs text-ink-3">{t("Possible causes")}:<ul className="mt-1 space-y-0.5">{a.causes.map((c: string) => <li key={c}>– {c}</li>)}</ul></div>}
                 </div>
                 {role !== "generator" && a.status !== "resolved" && (

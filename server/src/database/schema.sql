@@ -541,3 +541,22 @@ CREATE TABLE IF NOT EXISTS citizen_actions (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_citizen_actions_user ON citizen_actions(user_id, created_at);
+
+-- Resident app, second round: daily quiz and problem reports join the action log.
+ALTER TABLE citizen_actions DROP CONSTRAINT IF EXISTS citizen_actions_kind_check;
+ALTER TABLE citizen_actions ADD CONSTRAINT citizen_actions_kind_check CHECK (kind IN ('scan','resin','guide','quiz','report'));
+
+-- A problem a resident reported (overflowing bin, missed collection, dumping, burning). Each one raises an operator alert.
+CREATE TABLE IF NOT EXISTS citizen_reports (
+  id         SERIAL PRIMARY KEY,
+  user_id    INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  kind       TEXT NOT NULL CHECK (kind IN ('overflowing_bin','missed_collection','dumping','burning','other')),
+  zone       TEXT NOT NULL,
+  lat        DOUBLE PRECISION,
+  lng        DOUBLE PRECISION,
+  note       TEXT,
+  image_key  TEXT,
+  alert_id   INT REFERENCES alerts(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_citizen_reports_user ON citizen_reports(user_id, created_at);
