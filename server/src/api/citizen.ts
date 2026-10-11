@@ -6,8 +6,9 @@ import { ai } from "../services/aiClient.ts";
 import { audit } from "../services/audit.ts";
 import * as Z from "../services/citizen.ts";
 
-/** Resident app. Open to every signed-in role; each person only ever reads and writes their own tally. */
+/** Resident app. Residents only (operators, admin included, never see it); each person only ever reads and writes their own tally. */
 export const citizenRouter = Router();
+citizenRouter.use("/citizen", (req, _res, next) => next(req.user?.role === "citizen" ? undefined : new HttpError(403, "The resident app is for resident accounts")));
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 8 * 1024 * 1024, files: 1 } });
 const MAGIC: number[][] = [[0xff, 0xd8, 0xff], [0x89, 0x50, 0x4e, 0x47], [0x52, 0x49, 0x46, 0x46]];

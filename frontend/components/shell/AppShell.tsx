@@ -6,7 +6,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   LayoutDashboard, Factory, Truck, Route, Warehouse, Scale, Zap, BarChart3, Cpu, Bell, Settings, ShieldCheck,
   LogOut, MessageSquareText, Play, Menu, X, Recycle, Map as MapIcon, CircleHelp, Shirt, BatteryCharging,
-  House, ScanLine, Lightbulb, Trophy, Sprout,
+  House, ScanLine, Lightbulb, Trophy,
 } from "lucide-react";
 import { Logo } from "./Logo";
 import { LangSwitcher, ThemeToggle } from "./Prefs";
@@ -24,7 +24,7 @@ import { PageFx } from "./PageFx";
 import { SeverityIcon } from "@/components/ui";
 
 type NavItem = { href: string; label: string; icon: any; roles?: Role[]; also?: string[] };
-// Residents get their own short menu. Operators reach the same screens through "Resident app".
+// Residents get their own short menu. Operators never see the resident screens.
 const RESIDENT_NAV: NavItem[] = [
   { href: "/home", label: "Home", icon: House },
   { href: "/scan", label: "Scan an item", icon: ScanLine },
@@ -47,7 +47,6 @@ const NAV: NavItem[] = [
   { href: "/analytics", label: "Analytics", icon: BarChart3, roles: ["admin", "fleet", "hub", "facility"] },
   { href: "/ai-model", label: "Models", icon: Cpu, roles: ["admin", "hub", "facility"] },
   { href: "/alerts", label: "Alerts", icon: Bell },
-  { href: "/home", label: "Resident app", icon: Sprout, also: ["/scan", "/resin", "/ideas", "/leaderboard"] },
   { href: "/settings", label: "Settings", icon: Settings },
   { href: "/admin", label: "Admin", icon: ShieldCheck, roles: ["admin"] },
 ];
@@ -64,8 +63,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   useEffect(() => { setHydrated(true); }, []);
   useEffect(() => { if (hydrated && !token) router.replace(`/login?next=${encodeURIComponent(path)}`); }, [hydrated, token, router, path]);
   useEffect(() => { setMobileNav(false); }, [path]);
+  // The resident screens belong to resident accounts only; operators land on their overview instead.
+  const operatorOnResident = !!user && user.role !== "citizen" && RESIDENT_NAV.some((n) => path === n.href || path.startsWith(`${n.href}/`));
+  useEffect(() => { if (operatorOnResident) router.replace("/dashboard"); }, [operatorOnResident, router]);
 
-  if (!hydrated || !token || !user) return <div className="grid min-h-screen place-items-center text-sm text-ink-3">{t("Loading WattCycle")}…</div>;
+  if (!hydrated || !token || !user || operatorOnResident) return <div className="grid min-h-screen place-items-center text-sm text-ink-3">{t("Loading WattCycle")}…</div>;
   const resident = user.role === "citizen";
   const nav = resident ? RESIDENT_NAV : NAV.filter((n) => !n.roles || n.roles.includes(user.role));
 
