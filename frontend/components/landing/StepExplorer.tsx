@@ -104,9 +104,9 @@ export function StepExplorer() {
                   <span className={cx("font-medium transition-colors duration-500", open ? "text-ink" : "text-ink-2")}>{t(name)}</span>
                   <span className="ml-auto text-xs text-ink-3">{t(who)}</span>
                 </span>
-                {/* opens smoothly: one muted line when closed, the full text when open */}
-                <span className={cx("block overflow-hidden pl-9 transition-[max-height,opacity,margin] duration-500 ease-out", open ? "mt-1.5 max-h-32 opacity-100" : "mt-0.5 max-h-[1.45rem] opacity-60")}>
-                  <span className={cx("block text-sm leading-relaxed", open ? "text-ink-2" : "text-ink-3")}>{t(what)}</span>
+                {/* closed: title only; open: the description slides in */}
+                <span className={cx("block overflow-hidden pl-9 transition-[max-height,opacity,margin] duration-500 ease-out", open ? "mt-1.5 max-h-32 opacity-100" : "mt-0 max-h-0 opacity-0")}>
+                  <span className="block text-sm leading-relaxed text-ink-2">{t(what)}</span>
                 </span>
               </button>
             </li>

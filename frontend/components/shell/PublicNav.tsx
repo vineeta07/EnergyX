@@ -14,11 +14,11 @@ export function PublicNav() {
           <Link href="/impact" className="hover:text-ink">{t("Impact")}</Link>
           <Link href="/about#architecture" className="hover:text-ink">{t("Architecture")}</Link>
         </nav>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
           <LangSwitcher />
           <ThemeToggle />
           <Link href="/login" className="hidden rounded-md px-3 py-1.5 text-sm text-ink-2 hover:text-ink sm:block">{t("Login")}</Link>
-          <Link href="/login" className="rounded-full bg-accent px-4 py-1.5 text-sm font-medium text-on-accent hover:opacity-90">{t("Open dashboard")}</Link>
+          <Link href="/login" className="whitespace-nowrap rounded-full bg-accent px-3 py-1.5 text-sm font-medium text-on-accent hover:opacity-90 sm:px-4"><span className="sm:hidden">{t("Login")}</span><span className="hidden sm:inline">{t("Open dashboard")}</span></Link>
         </div>
       </div>
     </header>

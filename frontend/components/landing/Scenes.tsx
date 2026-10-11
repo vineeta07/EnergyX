@@ -3,14 +3,14 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { t } from "@/lib/i18n";
 import { loadGsap, prefersReducedMotion } from "./gsapKit";
 
-/** Shows /media/hero.mp4 when you add one, and the drawn scene otherwise. */
-export function MediaFrame({ children }: { children: ReactNode }) {
+/** The drawn scene, or a looping video over it when `video` is given (e.g. "/media/hero.mp4"). Nothing is requested otherwise. */
+export function MediaFrame({ children, video, poster }: { children: ReactNode; video?: string; poster?: string }) {
   const [playing, setPlaying] = useState(false);
   return (
     <div className="relative overflow-hidden rounded-2xl border border-line bg-raised">
       {children}
-      <video className={`pointer-events-none absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${playing ? "opacity-100" : "opacity-0"}`}
-        src="/media/hero.mp4" poster="/media/hero.jpg" autoPlay muted loop playsInline onLoadedData={() => setPlaying(true)} onError={() => setPlaying(false)} />
+      {video && <video className={`pointer-events-none absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${playing ? "opacity-100" : "opacity-0"}`}
+        src={video} poster={poster} autoPlay muted loop playsInline onLoadedData={() => setPlaying(true)} onError={() => setPlaying(false)} />}
     </div>
   );
 }
@@ -48,7 +48,7 @@ export function RoadScene() {
     <div ref={root}>
       <MediaFrame>
         <svg viewBox="0 0 1200 280" className="block h-auto w-full" role="img" aria-label={t("A waste truck driving towards a power plant")}>
-          <circle cx="170" cy="62" r="28" fill="var(--gold)" opacity="0.85" />
+          <circle cx="380" cy="70" r="26" fill="var(--gold)" opacity="0.85" />
           <path d="M0 200 C150 150 280 190 430 170 C600 145 760 195 900 165 C1010 142 1110 170 1200 160 V280 H0Z" fill="var(--accent-dim)" />
           <path d="M0 225 C200 195 360 225 560 210 C760 195 980 225 1200 205 V280 H0Z" fill="var(--line)" />
           <rect x="0" y="232" width="1200" height="48" fill="var(--line-2)" opacity="0.55" />
@@ -59,6 +59,20 @@ export function RoadScene() {
             <rect x="46" y="28" width="30" height="36" rx="4" fill="var(--s-plastic)" /><rect x="43" y="22" width="36" height="9" rx="3" fill="var(--ink-3)" />
             <path d="M100 64 V20 H168 V64" fill="var(--panel)" stroke="var(--line-2)" strokeWidth="2" /><path d="M94 22 L134 0 L174 22Z" fill="var(--warn)" opacity="0.8" />
           </g>
+          {/* hub: weighbridge and sorting shed */}
+          <g transform="translate(560 150)">
+            <rect x="0" y="20" width="120" height="62" rx="5" fill="var(--panel)" stroke="var(--line-2)" strokeWidth="2" />
+            <path d="M-6 22 L60 0 L126 22Z" fill="var(--blue)" opacity="0.7" />
+            <rect x="14" y="40" width="40" height="42" rx="3" fill="var(--raised)" stroke="var(--line-2)" strokeWidth="2" />
+            <rect x="68" y="40" width="38" height="18" rx="3" fill="var(--raised)" />
+          </g>
+          {/* station labels */}
+          {([[154, "Ward bins", false], [620, "Hub scale", false], [1025, lit ? "Meter: +784 kWh" : "Chosen plant", lit]] as const).map(([x, label, hot]) => (
+            <g key={x} transform={`translate(${x} 34)`}>
+              <rect x={-66} y={-15} width={132} height={26} rx={13} fill="var(--panel)" stroke={hot ? "var(--gold)" : "var(--line-2)"} style={{ transition: "stroke .5s" }} />
+              <text y={3} textAnchor="middle" fontSize="13" fontWeight={hot ? 600 : 400} fill={hot ? "var(--gold)" : "var(--ink-2)"}>{t(label)}</text>
+            </g>
+          ))}
           {/* plant */}
           <g transform="translate(930 80)" onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} onClick={() => setHover(!hover)} style={{ cursor: "pointer" }} className="plant">
             <rect x="0" y="70" width="190" height="112" rx="6" fill="var(--panel)" stroke="var(--line-2)" strokeWidth="2" />
@@ -80,7 +94,7 @@ export function RoadScene() {
           </g>
         </svg>
       </MediaFrame>
-      <p className="mt-2 text-xs text-ink-3">{t("Scroll on and the truck drives to the plant. The lights come on when it arrives, or hover the plant.")}</p>
+      <p className="mt-3 text-xs text-ink-3">{t("One load, start to finish: 4 t of food waste from a ward collection point, weighed at the hub, sent to the plant that makes the most electricity from it.")}</p>
     </div>
   );
 }

@@ -9,6 +9,9 @@ ai-service/ml/models/artifacts/
 ai-service/ml/data/snapshots/
 frontend/public/maplibre/
 *.tfstate*
+*.tfplan
+infra/terraform/stage*.txt
+infra/terraform/apply*.txt
 .terraform/
 ai-service/ml/models/pretrained/
 ai-service/ml/data/datasets/
