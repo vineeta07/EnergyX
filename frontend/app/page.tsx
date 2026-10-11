@@ -20,7 +20,14 @@ const QUESTIONS = [
 
 export default function Landing() {
   const root = useRef<HTMLDivElement>(null);
-  const { data } = useQuery({ queryKey: ["public-impact"], queryFn: () => fetch("/api/public/impact").then((r) => (r.ok ? r.json() : null)), refetchInterval: 20_000 });
+  const { data } = useQuery({
+    queryKey: ["public-impact"],
+    queryFn: () =>
+      fetch("/api/public/impact")
+        .then((r) => (r.ok ? r.json() : null))
+        .catch(() => null),
+    refetchInterval: 20_000,
+  });
 
   // Entrance and scroll reveals. Content stays visible if scripts fail or motion is reduced.
   useEffect(() => {

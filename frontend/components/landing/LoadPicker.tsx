@@ -46,7 +46,10 @@ export function LoadPicker() {
     loadGsap().then(({ gsap, Flip }) => {
       if (off || !list.current) return;
       if (flip.current) Flip.from(flip.current, { duration: 0.6, ease: "power2.inOut", absolute: false });
-      gsap.fromTo(".pick-bar", { scaleX: 0 }, { scaleX: 1, transformOrigin: "left center", duration: 0.7, ease: "power2.out", stagger: 0.05 });
+      const bars = list.current.querySelectorAll(".pick-bar");
+      if (bars.length > 0) {
+        gsap.fromTo(bars, { scaleX: 0 }, { scaleX: 1, transformOrigin: "left center", duration: 0.7, ease: "power2.out", stagger: 0.05 });
+      }
     });
     return () => { off = true; };
   }, [kind, tonnes]);

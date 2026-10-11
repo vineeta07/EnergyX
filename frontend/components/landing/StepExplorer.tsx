@@ -74,9 +74,18 @@ export function StepExplorer() {
     loadGsap().then(({ gsap }) => {
       if (off || !panel.current) return;
       const q = gsap.utils.selector(panel.current);
-      gsap.fromTo(q("svg"), { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" });
-      gsap.fromTo(q(".grow"), { scaleY: 0, transformOrigin: "50% 100%" }, { scaleY: 1, duration: 0.7, stagger: 0.07, ease: "back.out(1.4)" });
-      gsap.fromTo(q(".needle"), { rotation: -50, transformOrigin: "262px 110px" }, { rotation: 0, duration: 1.1, ease: "elastic.out(1,0.5)" });
+      const svgs = q("svg");
+      if (svgs.length > 0) {
+        gsap.fromTo(svgs, { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" });
+      }
+      const grows = q(".grow");
+      if (grows.length > 0) {
+        gsap.fromTo(grows, { scaleY: 0, transformOrigin: "50% 100%" }, { scaleY: 1, duration: 0.7, stagger: 0.07, ease: "back.out(1.4)" });
+      }
+      const needles = q(".needle");
+      if (needles.length > 0) {
+        gsap.fromTo(needles, { rotation: -50, transformOrigin: "262px 110px" }, { rotation: 0, duration: 1.1, ease: "elastic.out(1,0.5)" });
+      }
     });
     return () => { off = true; };
   }, [i]);

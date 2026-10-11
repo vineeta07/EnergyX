@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   description: "Where Delhi's waste goes, how much energy it gives back, and which plant should take each load.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="h-full antialiased" suppressHydrationWarning>
       <head><script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} /></head>

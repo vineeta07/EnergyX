@@ -5,7 +5,13 @@ import { n, NONE } from "@/lib/format";
 import { t } from "@/lib/i18n";
 
 export default function Impact() {
-  const { data } = useQuery({ queryKey: ["public-impact"], queryFn: () => fetch("/api/public/impact").then((r) => (r.ok ? r.json() : null)) });
+  const { data } = useQuery({
+    queryKey: ["public-impact"],
+    queryFn: () =>
+      fetch("/api/public/impact")
+        .then((r) => (r.ok ? r.json() : null))
+        .catch(() => null),
+  });
   const rows = [
     ["Waste processed", data ? `${n(data.waste_processed_kg / 1000, 1)} t` : NONE, "Weighed on the hub scale"],
     ["Energy generated", data ? `${n(data.energy_kwh)} kWh` : NONE, "Plant meter readings"],
