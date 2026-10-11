@@ -29,11 +29,11 @@ export function RoadScene() {
       if (dead || !root.current) return;
       ctx = gsap.context(() => {
         if (prefersReducedMotion()) { gsap.set("#truck", { x: 625 }); setArrived(true); return; }
-        // The scene stays in view while you scroll, and the truck drives with the scroll.
-        // It reaches the plant only at the end of that stretch, just before the page moves on.
+        // The page scrolls normally. The truck drives as the scene moves up the screen and reaches
+        // the plant only as the scene is about to scroll away.
         const tl = gsap.timeline({
           defaults: { ease: "none" },
-          scrollTrigger: { trigger: root.current, start: "center 58%", end: "+=900", pin: true, scrub: 0.7, anticipatePin: 1, invalidateOnRefresh: true, onUpdate: (self) => setArrived(self.progress > 0.97) },
+          scrollTrigger: { trigger: root.current, start: "top 88%", end: "bottom 38%", scrub: 0.7, invalidateOnRefresh: true, onUpdate: (self) => setArrived(self.progress > 0.97) },
         });
         tl.fromTo("#truck", { x: 0 }, { x: 625, duration: 1 }, 0);
         tl.to(".wheel", { rotation: 900, transformOrigin: "50% 50%", duration: 1 }, 0);
@@ -80,7 +80,7 @@ export function RoadScene() {
           </g>
         </svg>
       </MediaFrame>
-      <p className="mt-2 text-xs text-ink-3">{t("Keep scrolling and the truck drives to the plant. The lights come on when it arrives, or hover the plant.")}</p>
+      <p className="mt-2 text-xs text-ink-3">{t("Scroll on and the truck drives to the plant. The lights come on when it arrives, or hover the plant.")}</p>
     </div>
   );
 }

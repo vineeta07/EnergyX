@@ -54,13 +54,13 @@ export function StepExplorer() {
         {STAGES.map(([name, what, who], k) => (
           <li key={name}>
             <button role="tab" aria-selected={i === k} onClick={() => choose(k)}
-              className={cx("w-full rounded-xl border px-4 py-3 text-left transition-all", i === k ? "border-accent/60 bg-panel shadow-[var(--shadow)]" : "border-transparent hover:border-line-2 hover:bg-panel/60")}>
+              className={cx("w-full rounded-xl border px-4 py-3 text-left transition-all", i === k ? "border-accent/60 bg-panel shadow-[var(--shadow)]" : "border-line/70 hover:border-line-2 hover:bg-panel/60")}>
               <span className="flex items-baseline gap-3">
                 <span className="num text-sm text-ink-3">{String(k + 1).padStart(2, "0")}</span>
                 <span className="font-medium text-ink">{t(name)}</span>
                 <span className="ml-auto text-xs text-ink-3">{t(who)}</span>
               </span>
-              {i === k && <span className="mt-1.5 block pl-9 text-sm leading-relaxed text-ink-2">{t(what)}</span>}
+              <span className={cx("mt-1.5 block pl-9 text-sm leading-relaxed transition-colors", i === k ? "text-ink-2" : "text-ink-3")}>{t(what)}</span>
               {i === k && !paused && seen && <span key={i} className="step-timer mt-2 block h-0.5 origin-left rounded bg-accent/60" />}
             </button>
           </li>
