@@ -51,7 +51,7 @@ export const pages: Entries = {
   "Training…": ["सिखाया जा रहा है…", "প্রশিক্ষণ চলছে…", "பயிற்றுவிக்கிறது…", "ਸਿਖਾਇਆ ਜਾ ਰਿਹਾ ਹੈ…"],
   "Retrain all models": ["सभी मॉडल दोबारा सिखाएँ", "সব মডেল আবার প্রশিক্ষণ দিন", "அனைத்து மாதிரிகளையும் மறுபயிற்றுவி", "ਸਾਰੇ ਮਾਡਲ ਮੁੜ ਸਿਖਾਓ"],
   "Training pipeline": ["प्रशिक्षण पाइपलाइन", "প্রশিক্ষণ পাইপলাইন", "பயிற்சிக் குழாய்வழி", "ਸਿਖਲਾਈ ਪਾਈਪਲਾਈਨ"],
-  "ml/pipelines/train.py. The same code runs locally and as a SageMaker training job.": ["ml/pipelines/train.py। यही कोड स्थानीय रूप से और SageMaker प्रशिक्षण जॉब के रूप में चलता है।", "ml/pipelines/train.py। একই কোড স্থানীয়ভাবে এবং SageMaker প্রশিক্ষণ জব হিসেবে চলে।", "ml/pipelines/train.py. அதே நிரல் உள்ளூரிலும் SageMaker பயிற்சிப் பணியாகவும் ஓடும்.", "ml/pipelines/train.py। ਇਹੀ ਕੋਡ ਸਥਾਨਕ ਤੌਰ ਤੇ ਅਤੇ SageMaker ਸਿਖਲਾਈ ਜੌਬ ਵਜੋਂ ਚੱਲਦਾ ਹੈ।"],
+  "ml/pipelines/train.py runs inside the AI service; every version is saved to S3.": ["ml/pipelines/train.py AI सेवा के भीतर चलता है; हर संस्करण S3 में सहेजा जाता है।", "ml/pipelines/train.py AI পরিষেবার ভেতরে চলে; প্রতিটি সংস্করণ S3-এ সংরক্ষিত হয়।", "ml/pipelines/train.py AI சேவைக்குள் இயங்குகிறது; ஒவ்வொரு பதிப்பும் S3 இல் சேமிக்கப்படுகிறது.", "ml/pipelines/train.py AI ਸੇਵਾ ਦੇ ਅੰਦਰ ਚੱਲਦਾ ਹੈ; ਹਰ ਸੰਸਕਰਣ S3 ਵਿੱਚ ਸੰਭਾਲਿਆ ਜਾਂਦਾ ਹੈ।"],
   "Not trained yet": ["अभी सिखाया नहीं गया", "এখনও প্রশিক্ষিত নয়", "இன்னும் பயிற்றுவிக்கப்படவில்லை", "ਹਾਲੇ ਸਿਖਾਇਆ ਨਹੀਂ ਗਿਆ"],
   "Retrain": ["दोबारा सिखाएँ", "আবার প্রশিক্ষণ দিন", "மறுபயிற்றுவி", "ਮੁੜ ਸਿਖਾਓ"],
   "Waiting for the first training run…": ["पहली प्रशिक्षण रन का इंतज़ार…", "প্রথম প্রশিক্ষণ রানের অপেক্ষায়…", "முதல் பயிற்சி ஓட்டத்துக்காகக் காத்திருக்கிறது…", "ਪਹਿਲੀ ਸਿਖਲਾਈ ਰਨ ਦੀ ਉਡੀਕ…"],
@@ -360,7 +360,7 @@ export const pages: Entries = {
   "All routes": ["सभी रूट", "সব রুট", "அனைத்து வழித்தடங்கள்", "ਸਾਰੇ ਰੂਟ"],
   "{v} · {k} · {n} stops": ["{v} · {k} · {n} ठहराव", "{v} · {k} · {n}টি স্টপ", "{v} · {k} · {n} நிறுத்தங்கள்", "{v} · {k} · {n} ਠਹਿਰਾਅ"],
   "Road distances and drive times: OpenStreetMap through OSRM": ["सड़क की दूरी और सफ़र का समय: OSRM के ज़रिए OpenStreetMap", "রাস্তার দূরত্ব ও যাত্রার সময়: OSRM-এর মাধ্যমে OpenStreetMap", "சாலைத் தூரமும் பயண நேரமும்: OSRM வழியாக OpenStreetMap", "ਸੜਕ ਦੀ ਦੂਰੀ ਅਤੇ ਸਫ਼ਰ ਦਾ ਸਮਾਂ: OSRM ਰਾਹੀਂ OpenStreetMap"],
-  "Amazon Location route matrix when run on AWS": ["AWS पर चलाने पर Amazon Location का रूट मैट्रिक्स", "AWS-এ চালালে Amazon Location রুট ম্যাট্রিক্স", "AWS-இல் இயக்கும்போது Amazon Location வழித்தட அணி", "AWS ਉੱਤੇ ਚਲਾਉਣ ਤੇ Amazon Location ਰੂਟ ਮੈਟ੍ਰਿਕਸ"],
+  "No cached road distance: straight line × 1.25": ["सड़क दूरी उपलब्ध नहीं: सीधी रेखा × 1.25", "রাস্তার দূরত্ব নেই: সরলরেখা × ১.২৫", "சாலை தூரம் இல்லை: நேர்கோடு × 1.25", "ਸੜਕ ਦੂਰੀ ਨਹੀਂ: ਸਿੱਧੀ ਲਕੀਰ × 1.25"],
 
   // settings
   "Expected energy output": ["अपेक्षित ऊर्जा उत्पादन", "প্রত্যাশিত শক্তি উৎপাদন", "எதிர்பார்க்கும் ஆற்றல் உற்பத்தி", "ਉਮੀਦ ਕੀਤਾ ਊਰਜਾ ਉਤਪਾਦਨ"],

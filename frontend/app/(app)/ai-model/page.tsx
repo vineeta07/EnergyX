@@ -32,7 +32,7 @@ export default function AiModel() {
         actions={role === "admin" && <Button variant="primary" loading={retrain.isPending || running} onClick={() => retrain.mutate("all")}><RefreshCw className="size-4" />{running ? t("Training…") : t("Retrain all models")}</Button>} />
       {retrain.error && <ErrorBox error={retrain.error} />}
 
-      <Panel title={t("Training pipeline")} subtitle={t("ml/pipelines/train.py. The same code runs locally and as a SageMaker training job.")}>
+      <Panel title={t("Training pipeline")} subtitle={t("ml/pipelines/train.py runs inside the AI service; every version is saved to S3.")}>
         <div className="flex flex-wrap items-center gap-1.5">
           {PIPE.map(([l, I], i) => (
             <div key={l} className="flex items-center gap-1.5">
