@@ -69,9 +69,9 @@ def info() -> dict:
 
 def detect(images: list[bytes], conf: float = 0.35, iou: float = 0.5, max_det: int = 30) -> list[dict]:
     """One result per photo: boxes as fractions of the image (x1, y1, x2, y2), most confident first."""
+    model = _load()  # first, so a missing detector raises DetectorUnavailable even where Pillow isn't installed
     from PIL import Image, ImageOps
 
-    model = _load()
     out = []
     for raw in images:
         try:
