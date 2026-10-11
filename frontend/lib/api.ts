@@ -24,6 +24,11 @@ async function request<T>(method: string, path: string, body?: unknown, isForm =
     useAuth.getState().clear();
     if (typeof window !== "undefined" && !location.pathname.startsWith("/login")) location.href = "/login?expired=1";
   }
+  // The API answers a bare "Not found" only for an address it does not have: the web app is newer than the
+  // running API (started before an update). Say so plainly instead of a puzzling "Not found".
+  if (res.status === 404 && json.error === "Not found") {
+    throw new ApiError(404, "The server is running an older version of WattCycle. Restart the API and reload this page.");
+  }
   if (!res.ok) {
     const detail = Array.isArray(json.details) ? `: ${json.details.map((d: any) => `${d.path} ${d.message}`).join("; ")}` : "";
     throw new ApiError(res.status, (json.error ?? `Request failed (${res.status})`) + detail, json.details);
