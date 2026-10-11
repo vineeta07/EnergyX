@@ -54,7 +54,23 @@ export const RECYCLED_LABEL: Record<Resin["recycled"], string> = { widely: "Wide
 export const RECYCLED_COLOR: Record<Resin["recycled"], string> = { widely: "var(--accent)", sometimes: "var(--gold)", rarely: "var(--warn)" };
 
 export const useProfile = () => useQuery({ queryKey: ["resident", "me"], queryFn: () => api.get<Profile>("/citizen/me") });
-export const useCatalogue = () => useQuery({ queryKey: ["resident", "catalogue"], queryFn: () => api.get<Catalogue>("/citizen/catalogue"), staleTime: Infinity });
+/**
+ * The item list, plastic codes, areas and report types. Checked on arrival: an API started before an update
+ * sends an older shape, and the screens would otherwise fail deep inside (e.g. no report types to list).
+ * Kept for a few minutes, not for the whole visit, so a restarted API is picked up without a reload.
+ */
+export const useCatalogue = () => useQuery({
+  queryKey: ["resident", "catalogue"],
+  queryFn: async () => {
+    const c = await api.get<Catalogue>("/citizen/catalogue");
+    if (!Array.isArray(c.zones) || !Array.isArray(c.report_kinds) || !c.points?.report) {
+      // English here; ErrorBox translates the message.
+      throw new Error("The server is running an older version of WattCycle. Restart the API and reload this page.");
+    }
+    return c;
+  },
+  staleTime: 5 * 60_000,
+});
 
 /** After an action that earned points: put the fresh profile in the cache and refresh the leaderboard. */
 export function useApplyReward() {
