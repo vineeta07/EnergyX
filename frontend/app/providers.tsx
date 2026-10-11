@@ -3,6 +3,7 @@ import { Fragment, useEffect, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { restoreLang, useLang } from "@/lib/i18n";
 import { restoreTheme } from "@/lib/theme";
+import { Localizer } from "@/components/shell/Localizer";
 
 let browserQueryClient: QueryClient | undefined;
 
@@ -20,7 +21,7 @@ export function Providers({ children }: { children: ReactNode }) {
   // re-renders every string. The query cache lives above the key and survives.
   return (
     <QueryClientProvider client={getQueryClient()}>
-      <Fragment key={lang}>{children}</Fragment>
+      <Fragment key={lang}>{children}<Localizer /></Fragment>
     </QueryClientProvider>
   );
 }

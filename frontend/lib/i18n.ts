@@ -1,6 +1,8 @@
 "use client";
 import { create } from "zustand";
 import { DICT } from "./dict";
+import { translitText, translitWord } from "./translit";
+import { translatePhrase } from "./phrases";
 
 export type Lang = "en" | "hi" | "bn" | "ta" | "pa";
 
@@ -53,6 +55,7 @@ export function t(key: string, vars?: Record<string, string | number | null | un
   if (lang !== "en") {
     const hit = DICT[key]?.[COLUMN[lang]];
     if (hit) s = hit;
+    else if (/[A-Za-z]/.test(s)) s = translitText(s, lang as "hi" | "bn" | "ta" | "pa");
   }
   if (vars) s = s.replace(/\{(\w+)\}/g, (_, k) => (vars[k] == null ? "" : String(vars[k])));
   return s;
@@ -64,4 +67,12 @@ export function tEnum(v: string | null | undefined) {
   const spaced = v.replace(/_/g, " ");
   const pretty = spaced.charAt(0).toUpperCase() + spaced.slice(1).toLowerCase();
   return t(pretty);
+}
+
+/** For text drawn outside the page (map labels and popups): translate sentences from the server, or write names phonetically. */
+export function tx(text: string): string {
+  const lang = useLang.getState().lang;
+  if (lang === "en" || !/[A-Za-z]/.test(text)) return text;
+  const key = lang as "hi" | "bn" | "ta" | "pa";
+  return translatePhrase(text, key, (w) => translitWord(w, key)) ?? translitText(text, key);
 }

@@ -25,14 +25,21 @@ export function RoadScene() {
   useEffect(() => {
     let ctx: { revert: () => void } | undefined;
     let dead = false;
-    loadGsap().then(({ gsap }) => {
+    loadGsap().then(({ gsap, ScrollTrigger }) => {
       if (dead || !root.current) return;
       ctx = gsap.context(() => {
-        if (prefersReducedMotion()) { gsap.set("#truck", { x: 625 }); return; }
-        gsap.fromTo("#truck", { x: 0 }, { x: 625, ease: "none", scrollTrigger: { trigger: root.current, start: "top 92%", end: "top 40%", scrub: 0.5, onUpdate: (self) => setArrived(self.progress > 0.92) } });
-        gsap.to(".wheel", { rotation: 360, transformOrigin: "50% 50%", ease: "none", scrollTrigger: { trigger: root.current, start: "top 92%", end: "top 40%", scrub: 0.5 }, duration: 1 });
+        if (prefersReducedMotion()) { gsap.set("#truck", { x: 625 }); setArrived(true); return; }
+        // The scene stays in view while you scroll, and the truck drives with the scroll.
+        // It reaches the plant only at the end of that stretch, just before the page moves on.
+        const tl = gsap.timeline({
+          defaults: { ease: "none" },
+          scrollTrigger: { trigger: root.current, start: "center 58%", end: "+=900", pin: true, scrub: 0.7, anticipatePin: 1, invalidateOnRefresh: true, onUpdate: (self) => setArrived(self.progress > 0.97) },
+        });
+        tl.fromTo("#truck", { x: 0 }, { x: 625, duration: 1 }, 0);
+        tl.to(".wheel", { rotation: 900, transformOrigin: "50% 50%", duration: 1 }, 0);
         gsap.fromTo(".puff", { y: 0, opacity: 0.8, scale: 0.6 }, { y: -46, opacity: 0, scale: 1.4, duration: 3.2, stagger: 1.05, repeat: -1, ease: "sine.out", transformOrigin: "50% 50%" });
       }, root);
+      ScrollTrigger.refresh();
     });
     return () => { dead = true; ctx?.revert(); };
   }, []);
@@ -73,7 +80,7 @@ export function RoadScene() {
           </g>
         </svg>
       </MediaFrame>
-      <p className="mt-2 text-xs text-ink-3">{t("Scroll and the truck follows the road to the plant. The lights come on when it arrives, or hover the plant.")}</p>
+      <p className="mt-2 text-xs text-ink-3">{t("Keep scrolling and the truck drives to the plant. The lights come on when it arrives, or hover the plant.")}</p>
     </div>
   );
 }

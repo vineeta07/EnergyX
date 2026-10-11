@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useLive } from "@/store/live";
 import { BUSINESS_LABEL, cx, token, TECH_LABEL } from "@/lib/format";
-import { t, tEnum } from "@/lib/i18n";
+import { t, tEnum, tx } from "@/lib/i18n";
 import { useTheme } from "@/lib/theme";
 
 // Keyless vector basemaps (CARTO Positron for light, Dark Matter for dark). In AWS mode set
@@ -92,9 +92,9 @@ export function NetworkMap({ height = 420, extra, className, layers = { sources:
     const fc = (features: any[]) => ({ type: "FeatureCollection", features });
     const pt = (lng: number, lat: number, props: any) => ({ type: "Feature", geometry: { type: "Point", coordinates: [lng, lat] }, properties: props });
     const hl = new Set(extra?.highlightFacilityIds ?? []);
-    m.getSource("sources")?.setData(fc(layers.sources ? data.sources.map((s: any) => pt(s.lng, s.lat, { kg: s.avg_daily_kg, open: s.open_requests, html: `<b>${esc(s.name)}</b><br/>${esc(BUSINESS_LABEL[s.business_type] ?? s.business_type)} · ${Math.round(s.avg_daily_kg)} ${t("kg/day")}${s.open_requests ? `<br/><span style="color:${token("accent")}">${t("{n} open pickup", { n: s.open_requests })}</span>` : ""}` })) : []));
-    m.getSource("hubs")?.setData(fc(layers.hubs ? data.hubs.map((h: any) => pt(h.lng, h.lat, { code: h.code, html: `<b>${esc(h.code)} · ${esc(h.name)}</b><br/>${h.capacity_tpd} ${t("t/day")} · ${t("{n} kg on site", { n: Math.round(h.current_load_kg) })}` })) : []));
-    m.getSource("facilities")?.setData(fc(layers.facilities ? data.facilities.map((f: any) => pt(f.lng, f.lat, { short: f.label.replace("Facility ", ""), status: f.status, hl: hl.has(f.id), html: `<b>${esc(f.label)}, ${esc(f.name)}</b><br/>${esc(TECH_LABEL[f.technology])}<br/>${t("Efficiency")} ${f.efficiency_pct}% · ${t("Utilization")} ${f.utilization_pct}%` })) : []));
+    m.getSource("sources")?.setData(fc(layers.sources ? data.sources.map((s: any) => pt(s.lng, s.lat, { kg: s.avg_daily_kg, open: s.open_requests, html: `<b>${esc(tx(s.name))}</b><br/>${esc(BUSINESS_LABEL[s.business_type] ?? s.business_type)} · ${Math.round(s.avg_daily_kg)} ${t("kg/day")}${s.open_requests ? `<br/><span style="color:${token("accent")}">${t("{n} open pickup", { n: s.open_requests })}</span>` : ""}` })) : []));
+    m.getSource("hubs")?.setData(fc(layers.hubs ? data.hubs.map((h: any) => pt(h.lng, h.lat, { code: h.code, html: `<b>${esc(h.code)} · ${esc(tx(h.name))}</b><br/>${h.capacity_tpd} ${t("t/day")} · ${t("{n} kg on site", { n: Math.round(h.current_load_kg) })}` })) : []));
+    m.getSource("facilities")?.setData(fc(layers.facilities ? data.facilities.map((f: any) => pt(f.lng, f.lat, { short: tx(f.label.replace("Facility ", "")), status: f.status, hl: hl.has(f.id), html: `<b>${esc(tx(f.label))}, ${esc(tx(f.name))}</b><br/>${esc(TECH_LABEL[f.technology])}<br/>${t("Efficiency")} ${f.efficiency_pct}% · ${t("Utilization")} ${f.utilization_pct}%` })) : []));
     const routeColor = (r: any) => (extra?.highlightRouteId === r.id ? token("accent") : r.kind === "dispatch" ? token("blue") : token("ink-3"));
     m.getSource("routes")?.setData(fc(layers.routes ? data.routes.map((r: any) => ({ type: "Feature", geometry: { type: "LineString", coordinates: r.stops.map((s: any) => [s.lng, s.lat]) }, properties: { color: routeColor(r), width: extra?.highlightRouteId === r.id ? 3.5 : 1.8 } })) : []));
     m.getSource("extra")?.setData(fc((extra?.lines ?? []).map((l) => ({ type: "Feature", geometry: { type: "LineString", coordinates: l.coords }, properties: { color: l.color, width: l.width ?? 2.5, dashed: !!l.dashed } }))));

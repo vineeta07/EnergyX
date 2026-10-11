@@ -124,7 +124,7 @@ html[lang="hi"] body, html[lang="bn"] body, html[lang="ta"] body, html[lang="pa"
 
 /* Autoplay timer under the active step. */
 @keyframes step-timer { from { transform: scaleX(0); } to { transform: scaleX(1); } }
-.step-timer { animation: step-timer 5.2s linear forwards; }
+.step-timer { animation: step-timer 4.2s linear forwards; }
 @media (prefers-reduced-motion: reduce) { .step-timer { animation: none; } }
 
 /* Buttons feel pressed. */
