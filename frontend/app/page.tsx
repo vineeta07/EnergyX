@@ -88,7 +88,7 @@ export default function Landing() {
         <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
           <div data-reveal className="mb-8 max-w-xl">
             <h2 className="font-serif text-3xl font-medium text-ink">{t("Six steps, and the last one feeds the first.")}</h2>
-            <p className="mt-3 text-sm leading-relaxed text-ink-2">{t("Pick a step to see what happens. Every metered kWh is stored next to the number that was predicted for it, so the next ranking is a little less wrong.")}</p>
+            <p className="mt-3 text-sm leading-relaxed text-ink-2">{t("Scroll down or move over a step and it opens. Left alone, they open one after another. Every metered kWh is stored next to its prediction, so the next ranking is a little less wrong.")}</p>
           </div>
           <StepExplorer />
         </div>
