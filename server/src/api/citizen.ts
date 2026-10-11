@@ -61,6 +61,24 @@ citizenRouter.post("/citizen/guide", ah(async (req, res) => {
   res.json(await Z.logGuide(req.user!.id, b.slug));
 }));
 
+// ---- whole-bag check: every item in one photo, from the YOLOv8 detector in the AI service
+citizenRouter.post("/citizen/bag", upload.single("file"), ah(async (req, res) => {
+  const f = req.file;
+  if (!f) throw new HttpError(400, "file is required");
+  if (!MAGIC.some((sig) => sig.every((b, i) => f.buffer[i] === b))) throw new HttpError(415, "Only JPEG, PNG or WebP images are accepted");
+  let out: any;
+  try {
+    out = await ai.detectWaste({ images: [f.buffer.toString("base64")] });
+  } catch (e) {
+    // The detector needs the ultralytics package and an 87 MB weights file; without them the screen says so and points to the single-item scan.
+    if (e instanceof HttpError && (e.status === 503 || e.status === 502)) return res.json({ mode: "unavailable", reason: "The bag check is not running right now." });
+    throw e;
+  }
+  const result = Z.bagResult(out.photos[0]);
+  const reward = result.detections.length ? await Z.logBag(req.user!.id, result.detections.length, result.detections[0].guide.key) : null;
+  res.json({ mode: "photo", model: out.model, ...result, reward });
+}));
+
 // ---- daily quiz
 citizenRouter.get("/citizen/quiz", ah(async (req, res) => { res.json(await Z.quiz(req.user!.id)); }));
 citizenRouter.post("/citizen/quiz", ah(async (req, res) => {

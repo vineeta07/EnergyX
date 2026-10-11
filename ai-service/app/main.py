@@ -21,7 +21,7 @@ from app.config import SERVICE_KEY
 from app.schemas import (AssistantIn, ClassifyImageIn, ClassifyIn, DesignPackIn, FadeUpdateIn, ForecastIn, GradeIn, PathwayIn, PlanIn, RankIn,
                          RoutesIn, TrainIn, UpcycleMatchIn)
 from ml.circular import battery, upcycle
-from ml.inference import predict, vision
+from ml.inference import detect, predict, vision
 from ml.inference.predict import ModelNotReady
 from ml.models import registry
 from ml.optimization import city_plan, ranking, routing
@@ -30,6 +30,7 @@ from ml.pipelines import train as training
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     vision.warm_up()  # returns at once; the image model loads in the background
+    detect.warm_up()  # the multi-item detector (best.pt) too
     yield
 
 
@@ -62,6 +63,11 @@ async def vision_missing(_req: Request, exc: Exception):
     return JSONResponse(status_code=503, content={"detail": str(exc)})
 
 
+@app.exception_handler(detect.DetectorUnavailable)
+async def detector_missing(_req: Request, exc: Exception):
+    return JSONResponse(status_code=503, content={"detail": str(exc)})
+
+
 @app.exception_handler(ModelNotReady)
 async def not_ready(_req: Request, exc: ModelNotReady):
     return JSONResponse(status_code=503, content={"detail": str(exc)})
@@ -77,7 +83,7 @@ async def timing(request: Request, call_next):
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "assistant": assistant.provider_info(), "artifacts": registry.remote_info(), "models": {**registry.status(), "vision": {"loaded": vision.available(), "version": vision.MODEL_ID if vision.available() else None, "algorithm": vision.info()["architecture"]}}}
+    return {"status": "ok", "assistant": assistant.provider_info(), "artifacts": registry.remote_info(), "models": {**registry.status(), "vision": {"loaded": vision.available(), "version": vision.MODEL_ID if vision.available() else None, "algorithm": vision.info()["architecture"]}, "detector": detect.info()}}
 
 
 @app.post("/v1/forecast", dependencies=[Depends(service_auth)])
@@ -95,6 +101,16 @@ async def classify(body: ClassifyIn):
 async def classify_image(body: ClassifyImageIn):
     """Per-photo item + stream prediction (no load composition)."""
     return {"model": vision.MODEL_ID, "photos": await run_in_threadpool(vision.classify_images, _decode_images(body.images))}
+
+
+@app.post("/v1/detect-waste", dependencies=[Depends(service_auth)])
+async def detect_waste(body: ClassifyImageIn):
+    """Every piece of waste in each photo, boxed and labelled (YOLOv8, ml/models/best.pt)."""
+    try:
+        photos = await run_in_threadpool(detect.detect_and_name, _decode_images(body.images), vision.classify_images if vision.available() else None)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    return {"model": detect.MODEL_ID, "photos": photos}
 
 
 @app.post("/v1/predict-energy", dependencies=[Depends(service_auth)])

@@ -544,7 +544,7 @@ CREATE INDEX IF NOT EXISTS idx_citizen_actions_user ON citizen_actions(user_id, 
 
 -- Resident app, second round: daily quiz and problem reports join the action log.
 ALTER TABLE citizen_actions DROP CONSTRAINT IF EXISTS citizen_actions_kind_check;
-ALTER TABLE citizen_actions ADD CONSTRAINT citizen_actions_kind_check CHECK (kind IN ('scan','resin','guide','quiz','report'));
+ALTER TABLE citizen_actions ADD CONSTRAINT citizen_actions_kind_check CHECK (kind IN ('scan','resin','guide','quiz','report','bag'));
 
 -- A problem a resident reported (overflowing bin, missed collection, dumping, burning). Each one raises an operator alert.
 CREATE TABLE IF NOT EXISTS citizen_reports (

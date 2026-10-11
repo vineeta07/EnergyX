@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { Camera, Check, ImagePlus, RotateCcw, Search } from "lucide-react";
 import { api } from "@/lib/api";
 import { ErrorBox, Loading } from "@/components/ui";
@@ -85,6 +86,7 @@ export default function Scan() {
             <BigButton tone="quiet" onClick={() => gallery.current?.click()}><ImagePlus className="size-5" />{t("Choose a picture")}</BigButton>
           </div>
           <button onClick={() => setStep({ at: "pick" })} className="mt-4 text-sm text-accent underline underline-offset-4">{t("No camera? Pick the item from a list")}</button>
+          <p className="mt-3 text-sm text-ink-3">{t("Got a whole bag?")} <Link href="/bag" className="text-accent underline underline-offset-4">{t("Check everything in one photo")}</Link></p>
         </Card>
       )}
 

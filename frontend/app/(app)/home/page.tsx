@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { Award, ChevronRight, CircleHelp, Flame, Lightbulb, MapPin, Megaphone, Recycle, ScanLine, Trophy } from "lucide-react";
+import { Award, ChevronRight, CircleHelp, Flame, Lightbulb, MapPin, Megaphone, Recycle, ScanLine, ShoppingBag, Trophy } from "lucide-react";
 import { useAuth } from "@/store/auth";
 import { ErrorBox, Loading } from "@/components/ui";
 import { ago, cx, n } from "@/lib/format";
@@ -52,6 +52,7 @@ export default function Home() {
             <Link href="/scan" data-tour="scan-cta" className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-accent px-6 text-[15px] font-medium text-on-accent hover:opacity-90">
               <ScanLine className="size-5" />{t("Scan an item")}
             </Link>
+            <Link href="/bag" className="inline-flex items-center gap-1.5 text-sm font-medium text-accent hover:underline"><ShoppingBag className="size-4" />{t("Check a whole bag")}</Link>
             <ResidentDemoLink />
           </div>
           <p className="mt-2 text-xs text-ink-3">{left > 0 ? t("{n} more scans earn points today.", { n: left }) : t("You have reached today's points limit. Scans still count towards your tally.")}</p>
@@ -117,7 +118,7 @@ export default function Home() {
             {p.recent.map((r) => (
               <li key={r.id} className="flex items-center gap-3 py-2.5 text-sm">
                 <MaterialDot material={r.material} />
-                <span className="min-w-0 flex-1 truncate text-ink">{r.kind === "scan" ? t(r.name) : r.kind === "resin" ? t("Looked up plastic code {n}", { n: r.item }) : r.kind === "quiz" ? t("Daily quiz: {s} right", { s: r.method ?? "" }) : r.kind === "report" ? t("Reported a problem") : t("Read an upcycling idea")}</span>
+                <span className="min-w-0 flex-1 truncate text-ink">{r.kind === "scan" ? t(r.name) : r.kind === "resin" ? t("Looked up plastic code {n}", { n: r.item }) : r.kind === "quiz" ? t("Daily quiz: {s} right", { s: r.method ?? "" }) : r.kind === "report" ? t("Reported a problem") : r.kind === "bag" ? t("Checked a whole bag: {n} items", { n: r.method ?? "" }) : t("Read an upcycling idea")}</span>
                 {r.verdict && <span className="hidden text-xs sm:block" style={{ color: VERDICT[r.verdict].color }}>{t(VERDICT[r.verdict].title)}</span>}
                 <span className="num w-10 text-right text-xs text-accent">{r.points > 0 ? `+${r.points}` : ""}</span>
                 <span className="w-20 text-right text-xs text-ink-3">{ago(r.created_at)}</span>

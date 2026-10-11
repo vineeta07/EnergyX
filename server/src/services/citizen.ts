@@ -73,7 +73,7 @@ export const RESINS = [
   { code: 7, short: "Other", name: "Mixed and other plastics", found: "Chips and biscuit packets, tetra packs, water-cooler jars", recycled: "rarely", reuse: "Depends on the item.", note: "Layers of different plastics and foil cannot be separated. Most of it is burned for energy." },
 ] as const;
 
-export const POINTS = { scan: 10, new_item: 5, resin: 5, guide: 5, quiz_right: 2, report: 5 };
+export const POINTS = { scan: 10, new_item: 5, resin: 5, guide: 5, quiz_right: 2, report: 5, bag: 10 };
 export const DAILY_SCAN_CAP = 15;
 export const LEVELS = [
   { n: 1, name: "Seed", at: 0 }, { n: 2, name: "Sprout", at: 50 }, { n: 3, name: "Seedling", at: 150 }, { n: 4, name: "Sapling", at: 300 },
@@ -120,6 +120,7 @@ export async function profile(userId: number) {
       COUNT(*) FILTER (WHERE kind='quiz')::int AS quizzes,
       COUNT(*) FILTER (WHERE kind='quiz' AND method='5/5')::int AS perfect,
       COUNT(*) FILTER (WHERE kind='report')::int AS reports,
+      COUNT(*) FILTER (WHERE kind='bag')::int AS bags,
       COUNT(*) FILTER (WHERE kind='quiz' AND ${DAY} = ${TODAY})::int AS quiz_today,
       COUNT(*) FILTER (WHERE kind='scan' AND ${DAY} = ${TODAY})::int AS scans_today,
       to_char(${TODAY},'YYYY-MM-DD') AS today
@@ -143,7 +144,7 @@ export async function profile(userId: number) {
   return {
     points: tot.points, level: levelFor(tot.points), streak, rank: tot.points > 0 ? rank!.rank : null,
     today: { scans: tot.scans_today, cap: DAILY_SCAN_CAP },
-    counts: { scans: tot.scans, resins: tot.resins, guides: tot.guides, materials: tot.materials, quizzes: tot.quizzes, reports: tot.reports },
+    counts: { scans: tot.scans, resins: tot.resins, guides: tot.guides, materials: tot.materials, quizzes: tot.quizzes, reports: tot.reports, bags: tot.bags },
     quiz_done_today: tot.quiz_today > 0,
     by_material: byMaterial,
     by_verdict: Object.fromEntries(byVerdict.map((v: any) => [v.verdict, v.n])),
@@ -162,6 +163,7 @@ export async function profile(userId: number) {
       badge("quiz", "Quiz regular", "Finish the daily quiz 5 times", tot.quizzes, 5),
       badge("perfect", "Full marks", "Get all 5 right in a daily quiz", tot.perfect, 1),
       badge("neighbour", "Good neighbour", "Report a problem in your area", tot.reports, 1),
+      badge("bags", "Bag checker", "Check 3 whole bags in one photo each", tot.bags, 3),
     ],
   };
 }
@@ -332,6 +334,55 @@ export async function myReports(userId: number) {
 
 export async function reportPhotoKey(id: number) {
   return (await one<{ image_key: string | null }>("SELECT image_key FROM citizen_reports WHERE id=$1", [id]))?.image_key ?? null;
+}
+
+// ------------------------------------------------------------------ whole-bag check (multi-item detector)
+/**
+ * What each class of the multi-item detector (ai-service/ml/inference/detect.py, YOLOv8 best.pt) means in a
+ * Delhi household. The model was trained on Canadian bin categories and does not read plastic codes, so
+ * `resin` lists the codes such items usually carry, as a hint to check the triangle, never as a reading.
+ */
+export interface BagGuide { label: string; key: string; name: string; material: string; verdict: Verdict; bin: Bin; resin: number[]; why: string; prep: string; exact?: boolean }
+export const BAG_GUIDE: Record<string, BagGuide> = {
+  Green_bin: { label: "Green_bin", key: "food", name: "Food or garden waste", material: "organic", verdict: "compost", bin: "green", resin: [],
+    why: "Food and plant waste rots down into compost or cooking gas.", prep: "Wet bin, with no plastic bag around it." },
+  Recycle: { label: "Recycle", key: "container", name: "Recyclable packaging (tub, tin, carton or box)", material: "mixed", verdict: "recycle", bin: "blue", resin: [2, 5],
+    why: "Clean tubs, tins, cartons and boxes are bought by scrap dealers and recycled.", prep: "Rinse it and keep it dry. Greasy or dirty packaging gets rejected." },
+  Deposit_Recycle: { label: "Deposit_Recycle", key: "bottle_can", name: "Drink bottle or can", material: "mixed", verdict: "recycle", bin: "blue", resin: [1],
+    why: "PET bottles and drink cans are the scrap Delhi's kabadiwalas want most.", prep: "Empty it, crush it and keep the cap on. Glass bottles can go back to the shop." },
+  "Crinkly Plastic": { label: "Crinkly Plastic", key: "soft_plastic", name: "Soft plastic (wrappers, pouches, carry bags)", material: "plastic", verdict: "energy", bin: "blue", resin: [4, 7],
+    why: "Thin film is rarely bought for recycling, so it is burned for energy. Clean milk pouches are the exception.", prep: "Dry bin, clean and dry. Keep milk pouches apart for the kabadiwala." },
+  "Metallic Wrapping": { label: "Metallic Wrapping", key: "foil_wrapper", name: "Foil-lined wrapper (chips or biscuit packet)", material: "plastic", verdict: "energy", bin: "blue", resin: [7],
+    why: "Layers of plastic and foil cannot be pulled apart, so it is burned for energy.", prep: "Dry bin. Fold it small." },
+};
+export const BAGS_REWARDED_PER_DAY = 3;
+
+/** How sure the single-item classifier must be about a boxed crop before its answer replaces the detector's. */
+export const NAME_TRUST = 0.6;
+
+/**
+ * Turns detector output into household guidance, grouped by bin. Unknown labels are dropped, never guessed.
+ * When the 30-class classifier named a box confidently, its exact item wins: it knows cardboard and paper,
+ * which the detector confuses with foil wrappers, and each item carries its own plastic code.
+ */
+export function bagResult(photo: { width: number; height: number; detections: { label: string; p: number; box: number[]; item?: { label: string; p: number } }[] }) {
+  const detections = photo.detections.filter((d) => BAG_GUIDE[d.label]).map((d, i) => {
+    const it = d.item && d.item.p >= NAME_TRUST ? ITEM_BY_KEY.get(d.item.label) : undefined;
+    const guide: BagGuide = it
+      ? { label: d.label, key: it.key, name: it.name, material: it.material, verdict: it.verdict, bin: it.bin, resin: it.resin ? [it.resin] : [], why: it.why, prep: it.prep, exact: true }
+      : BAG_GUIDE[d.label];
+    return { n: i + 1, p: it ? d.item!.p : d.p, box: d.box, guide, source: it ? "item" as const : "kind" as const };
+  });
+  const bins: Record<string, number> = {};
+  for (const d of detections) bins[d.guide.bin] = (bins[d.guide.bin] ?? 0) + 1;
+  return { width: photo.width, height: photo.height, detections, bins };
+}
+
+/** Points for a bag with at least one thing found, for the first few bags each day. */
+export async function logBag(userId: number, found: number, topKey: string) {
+  const today = (await one<any>(`SELECT COUNT(*)::int AS n FROM citizen_actions WHERE user_id=$1 AND kind='bag' AND ${DAY} = ${TODAY}`, [userId]))!.n;
+  const points = today < BAGS_REWARDED_PER_DAY ? POINTS.bag : 0;
+  return record(userId, { kind: "bag", item: topKey, material: null, verdict: null, points, method: `${found}` });
 }
 
 // ------------------------------------------------------------------ demo data

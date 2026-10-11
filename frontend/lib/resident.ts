@@ -14,12 +14,12 @@ export interface Badge { key: string; name: string; how: string; have: number; n
 export interface Profile {
   points: number; level: Level; streak: number; rank: number | null;
   today: { scans: number; cap: number };
-  counts: { scans: number; resins: number; guides: number; materials: number; quizzes: number; reports: number };
+  counts: { scans: number; resins: number; guides: number; materials: number; quizzes: number; reports: number; bags: number };
   quiz_done_today: boolean;
   by_material: { material: string; n: number }[];
   by_verdict: Record<string, number>;
   top_items: { item: string; name: string; n: number }[];
-  recent: { id: number; kind: "scan" | "resin" | "guide" | "quiz" | "report"; item: string; name: string; material: string | null; verdict: Verdict | null; points: number; method: string | null; created_at: string }[];
+  recent: { id: number; kind: "scan" | "resin" | "guide" | "quiz" | "report" | "bag"; item: string; name: string; material: string | null; verdict: Verdict | null; points: number; method: string | null; created_at: string }[];
   impact: { sorted_kg: number; kept_from_landfill_kg: number };
   badges: Badge[];
 }
@@ -27,7 +27,7 @@ export interface Zone { name: string; ref: string; lat: number; lng: number }
 export type ReportKind = "overflowing_bin" | "missed_collection" | "dumping" | "burning" | "other";
 export interface Catalogue {
   items: Item[]; resins: Resin[]; levels: { n: number; name: string; at: number }[];
-  points: { scan: number; new_item: number; resin: number; guide: number; quiz_right: number; report: number }; daily_scan_cap: number;
+  points: { scan: number; new_item: number; resin: number; guide: number; quiz_right: number; report: number; bag: number }; daily_scan_cap: number;
   zones: Zone[]; report_kinds: { key: ReportKind; title: string }[]; reports_per_day: number;
 }
 /** What the API sends back after something that can earn points. */

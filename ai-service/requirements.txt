@@ -15,3 +15,4 @@ torch>=2.6  # CPU wheel: pip install torch --index-url https://download.pytorch.
 h5py>=3.10
 pillow>=10.0
 pyarrow>=15.0
+ultralytics>=8.3  # multi-item waste detector (ml/models/best.pt, YOLOv8)

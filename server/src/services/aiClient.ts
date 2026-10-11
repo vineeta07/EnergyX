@@ -34,6 +34,7 @@ export const ai = {
   classify: (body: unknown) => call<any>("/v1/classify", body),
   // The first photo after a restart also loads the image model, which can take most of a minute on a laptop CPU.
   classifyImage: (body: unknown) => call<any>("/v1/classify-image", body, 60_000),
+  detectWaste: (body: unknown) => call<any>("/v1/detect-waste", body, 90_000),
   predictEnergy: (body: unknown) => call<any>("/v1/predict-energy", body),
   rankFacilities: (body: unknown) => call<any>("/v1/rank-facilities", body),
   optimizeRoutes: (body: unknown) => call<any>("/v1/optimize-routes", body, 30_000),
