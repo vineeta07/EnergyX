@@ -18,7 +18,10 @@ export type DomainEventType =
   | "ClassificationReviewed" | "EnergyPotentialCalculated" | "FacilitySelected" | "DestinationApproved"
   | "WasteDispatched" | "EnergyGenerationCompleted" | "ActualOutputRecorded" | "AITrainingDataCreated"
   | "ModelRetrainingStarted" | "ModelRetrained" | "AlertRaised" | "WasteSourceRegistered" | "FacilityRegistered"
-  | "VehiclePositions" | "DemoStage";
+  | "VehiclePositions" | "DemoStage"
+  | "UpcycleLotCreated" | "UpcycleMatched" | "UpcycleDispatched" | "UpcycleReceived" | "UpcycleCompleted"
+  | "BatteryLotReceived" | "BatteriesGraded" | "BatteryPackDesigned" | "BatteryPackAssembled" | "BatteryPackDeployed"
+  | "BatteryTelemetry" | "BatteryFadeUpdated" | "BatteriesSentToRecycling";
 
 export interface DomainEvent { id?: number; type: DomainEventType; message: string; payload?: any; created_at?: string }
 

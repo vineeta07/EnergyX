@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 
 from ml.features.build import BUSINESS_TYPES, energy_row, mix_features, month_cyc
+from ml.circular import recyclability
 from ml.models import registry
 from ml.training import classifier as clf_train
 from ml.training.energy import confidence as energy_confidence
@@ -112,8 +113,12 @@ def classify(total_kg: float, month: int, source_mix: list[dict], images: list[b
                       "flagged_for_review": sum(1 for p in photos if p["needs_review"])}
         method = f"tabular prior + {len(photos)}-photo sample audit (EfficientNetB0 vision model)"
     detected = sorted(({"stream": s, "pct": round(v * 100, 1), "kg": round(v * total_kg, 1)} for s, v in res["composition"].items()), key=lambda d: -d["kg"])
+    rec = recyclability.estimate(res["composition"], total_kg, vision_out["photos"] if vision_out else None)
+    if vision_out:
+        for p in vision_out["photos"]:
+            p.pop("class_probs", None)  # used for the estimate; too bulky to store per photo
     return {
-        **res, "detected": detected, "model_version": e["version"], "method": method, "vision": vision_out,
+        **res, "detected": detected, "model_version": e["version"], "method": method, "vision": vision_out, "recyclability": rec,
         "model_metrics": {k: e["meta"]["metrics"].get(k) for k in ("mae", "f1", "precision", "recall")},
     }
 

@@ -180,3 +180,82 @@ class ChatMsg(BaseModel):
 class AssistantIn(BaseModel):
     messages: list[ChatMsg] = Field(min_length=1)
     user: dict = {}
+
+
+# ------------------------------------------------------------------ circular economy
+UpcycleCategory = Literal["textile", "glass_container", "pet_bottle", "hdpe_container", "cardboard"]
+Chemistry = Literal["li_nmc", "li_lfp", "lead_acid"]
+
+
+class PartnerIn(BaseModel):
+    id: int
+    name: str
+    status: str = "active"
+    prices: dict[str, float] = {}
+    capacity_kg_week: float = Field(ge=0)
+    load_kg_week: float = 0
+    received_kg: float = 0
+    accepted_kg: float = 0
+    distance_km: float = Field(ge=0)
+    transport_cost_inr: float = 0
+    transport_co2_kg: float = 0
+
+
+class UpcycleMatchIn(BaseModel):
+    category: UpcycleCategory
+    kg: float = Field(gt=0, le=100_000)
+    partners: list[PartnerIn] = Field(max_length=200)
+
+
+class BatteryUnitIn(BaseModel):
+    id: int
+    chemistry: Chemistry
+    nominal_v: float = Field(gt=0, le=1000)
+    nominal_ah: float = Field(gt=0, le=2000)
+    measured_ah: float = Field(ge=0, le=2000)
+    ir_mohm: float = Field(gt=0, le=100_000)
+    voltage: Optional[float] = Field(default=None, ge=0, le=1000)
+    swelling: bool = False
+    leakage: bool = False
+    ir_ref_mohm: Optional[float] = None
+
+
+class GradeIn(BaseModel):
+    units: list[BatteryUnitIn] = Field(min_length=1, max_length=5000)
+    fade_priors: dict[str, float] = {}
+
+
+class GradedUnitIn(BaseModel):
+    id: int
+    chemistry: Chemistry
+    nominal_v: float
+    nominal_ah: float
+    measured_ah: float
+    ir_mohm: float
+    soh: float
+    grade: Literal["A", "B", "R"]
+    fade_per_cycle: float
+
+
+class DesignPackIn(BaseModel):
+    units: list[GradedUnitIn] = Field(min_length=1, max_length=2000)
+    application: Literal["solar_storage_48v", "erickshaw_48v", "streetlight_12v", "telecom_48v"]
+    target_kwh: Optional[float] = Field(default=None, gt=0, le=1000)
+
+
+class FadePoint(BaseModel):
+    cycles: float = Field(ge=0)
+    soh: float = Field(ge=0, le=1.5)
+
+
+class FadePack(BaseModel):
+    id: int
+    predicted_fade: Optional[float] = None
+    points: list[FadePoint]
+
+
+class FadeUpdateIn(BaseModel):
+    chemistry: Chemistry
+    prior_fade: float = Field(gt=0)
+    prior_n: float = Field(default=5.0, gt=0)
+    packs: list[FadePack]

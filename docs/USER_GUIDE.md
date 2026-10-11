@@ -250,6 +250,14 @@ This page carries one shipment through characterization, prediction and destinat
 3. The API stores a `waste_classifications` row (`pending_review`) and an AI row in `waste_compositions`. The shipment becomes `classified`.
 4. It publishes `WasteClassificationCompleted`. If confidence is below 80%, it raises a **Low classification confidence** alert.
 
+**Step 1b — Recyclable vs non-recyclable and upcycling** (panels below the classification)
+- The AI response also carries `recyclability` (`ml/circular/recyclability.py`):
+  - recyclable / non-recyclable / biodegradable kg and %;
+  - a per-stream recyclable share (prior, or prior + photos);
+  - upcycling potential per category.
+- Each photo in the sample audit shows a *recyclable / non-recyclable / biodegradable* tag. Hover it to see the reason.
+- **Set aside** (per upcycling category) → `POST /api/upcycling/lots {shipment_id, category, kg}` creates an upcycle lot. That mass is removed from the stream before routing. Continue on `/upcycling` (§5.4).
+
 **Step 2 — Human review** (the panel with the donut chart)
 
 | Button | API → function | Effect |
@@ -272,6 +280,7 @@ This page carries one shipment through characterization, prediction and destinat
   1. `facilityCandidates()` collects every facility that accepts the stream, with: distance from the hub (road km), transport cost and CO₂, compatibility, maximum moisture, utilization, efficiency, and historical yield from that facility's own meter readings.
   2. AI `/v1/rank-facilities` → `ranking.rank()` (§13) predicts kWh at **each** facility, filters out ineligible ones (with a reason), scores the rest with the configurable utility, runs 1,000 Monte-Carlo draws to measure decision stability, and writes the explanation.
   3. The API stores an `ai_decisions` row: inputs, output, full ranking, explanation, decision drivers, model feature importance, weights, confidence, score and model version. It also stores an `energy_predictions` row for the chosen facility, and publishes `FacilitySelected`.
+- **Recyclable share of plastic and paper first:** `streamSplit()` subtracts upcycle lots, then the recyclable share becomes a *Recycling* pathway decision to the nearest MRF. Only the non-recyclable remainder is ranked for energy.
 - **Paper, metal and other:** a rule-based *pathway* decision: recycling, material recovery, or residual. The decision names the most compatible material-recovery facility. No ML is involved, and the decision says so.
 
 **Step 5 — Approve or override** (the *Human oversight* panel)
@@ -285,6 +294,25 @@ This page carries one shipment through characterization, prediction and destinat
 
 **Step 6 — Closed-loop record** (bottom table)
 Each stream's predicted kWh and 90% interval, the actual kWh once the facility reports, the error %, and the model version. This is the per-shipment audit trail.
+
+### 5.4 Upcycling (`/upcycling`)
+- **Lots table.** Select a lot to see its lifecycle: Set aside → AI matched → Dispatched → Partner receipt → Upcycled.
+- **Match partner with AI** → `matchUpcycleLot()` → AI `/v1/circular/upcycle-match`:
+  - shows the ranking (score, learned acceptance, net value, CO2e avoided, km);
+  - shows excluded partners with a reason;
+  - compares the result with the default route.
+- **Dispatch** (or **Send to default route**).
+- **Record partner receipt** (accepted kg). This updates the partner's received and accepted kg, so the acceptance used in the next match changes (feedback).
+- **Record products** (what was made, units).
+
+### 5.5 Battery Second Life (`/batteries`)
+1. **Receive lot** (presets: laptop 18650 NMC cells, EV LFP modules, e-rickshaw lead-acid). One serial per unit.
+2. Select the lot → **Run tester** (simulated readings in demo), or paste a real tester CSV (`serial, measured_ah, ir_mohm, voltage, swelling`). The AI grades every unit A / B / R with remaining cycles. A scatter of SoH vs internal resistance shows the grade thresholds.
+3. **Design pack with AI.** Pick the application and, optionally, a target kWh. The pack is CP-SAT balanced and compared with unmatched assembly.
+4. In the pack panel: **Mark assembled** → **Deploy** at a hub → **+30/90/180 days telemetry**. The measured SoH is plotted against the predicted line. The observed fade updates the chemistry's fade prior, which the next grading uses.
+5. **Send to authorised recycler.** Grade-R units are recorded with the expected recovered materials.
+
+All circular flows are explained, with their assumptions, in `docs/CIRCULAR.md`.
 
 ---
 

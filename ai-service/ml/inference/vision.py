@@ -21,6 +21,8 @@ os.environ.setdefault("KERAS_BACKEND", "torch")
 
 import numpy as np
 
+from ml.circular import recyclability
+
 MODEL_DIR = Path(os.getenv("VISION_MODEL_DIR", Path(__file__).resolve().parents[1] / "models" / "pretrained" / "waste-classification-v2"))
 MODEL_ID = "Darshan764/waste-classification-v2"
 INPUT_SIZE = 224
@@ -99,11 +101,18 @@ def classify_images(images: list[bytes], top_k: int = 3) -> list[dict]:
             streams[STREAM_OF[c]] += float(p[i])
         top = np.argsort(p)[::-1][:top_k]
         best_stream = max(streams, key=streams.get)
+        class_probs = {c: round(float(p[i]), 5) for i, c in enumerate(CLASSES)}
+        rec = recyclability.photo_recyclability(class_probs)
+        top_item = recyclability.item_label(CLASSES[top[0]])
         out.append({
             "top": [{"label": CLASSES[i], "stream": STREAM_OF[CLASSES[i]], "p": round(float(p[i]), 4)} for i in top],
             "streams": {k: round(v, 4) for k, v in streams.items()},
             "stream": best_stream,
             "confidence": round(streams[best_stream], 4),
+            # Recyclable vs non-recyclable for this item (probability-weighted over all 30 classes)
+            "recyclable": rec["recyclable"], "p_recyclable": rec["p_recyclable"], "p_biodegradable": rec["p_biodegradable"],
+            "recyclability_reason": top_item["reason"], "upcycle": top_item["upcycle"],
+            "class_probs": class_probs,
         })
     return out
 

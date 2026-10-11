@@ -63,3 +63,13 @@ export function ago(d: string | Date | null | undefined) {
   return `${Math.round(s / 86400)} d ago`;
 }
 export const cx = (...c: (string | false | null | undefined | 0)[]) => c.filter(Boolean).join(" ");
+
+// ---- circular economy
+export const UPCYCLE_LABEL: Record<string, string> = {
+  textile: "Textiles & shoes", glass_container: "Glass jars & bottles", pet_bottle: "PET bottles", hdpe_container: "HDPE containers", cardboard: "Cardboard boxes",
+};
+export const CHEM_LABEL: Record<string, string> = { li_nmc: "Li-ion NMC", li_lfp: "Li-ion LFP", lead_acid: "Lead-acid" };
+export const APP_LABEL: Record<string, string> = {
+  solar_storage_48v: "Hub solar storage (48 V)", erickshaw_48v: "E-rickshaw pack (48 V)", streetlight_12v: "Solar street light (12 V)", telecom_48v: "Telecom / MRF backup (48 V)",
+};
+export const GRADE_COLOR: Record<string, string> = { A: "var(--accent)", B: "var(--warn)", R: "var(--crit)" };

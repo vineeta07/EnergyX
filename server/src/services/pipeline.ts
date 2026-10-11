@@ -225,13 +225,14 @@ export async function classifyShipment(shipmentId: number, imageKeys: string[] =
   const cls = await insert<any>("waste_classifications", {
     shipment_id: sh.id, model_version: res.model_version, method: res.method, composition: res.composition,
     uncertainty: res.uncertainty, confidence: res.confidence, status: "pending_review", image_key: imageKeys.join(",") || null,
-    vision: res.vision ?? null,
+    vision: res.vision ?? null, recyclability: res.recyclability ?? null,
   });
   const moisture = res.moisture_pct ?? sh.moisture_pct;
   await update("shipments", sh.id, { status: "classified", moisture_pct: moisture, category: res.composition.organic > 0.5 ? "Mixed organic" : "Mixed dry" });
   await insert("waste_compositions", { shipment_id: sh.id, ...res.composition, moisture_pct: moisture, origin: "ai" });
   const top = Object.entries(res.composition as Record<string, number>).sort((a, b) => b[1] - a[1])[0];
-  await publish("WasteClassificationCompleted", `${sh.code} classified: ${Math.round(top[1] * 100)}% ${top[0]} (confidence ${(res.confidence * 100).toFixed(1)}%)`, { shipment_id: sh.id, classification_id: cls.id });
+  const rec = res.recyclability;
+  await publish("WasteClassificationCompleted", `${sh.code} classified: ${Math.round(top[1] * 100)}% ${top[0]} (confidence ${(res.confidence * 100).toFixed(1)}%)${rec ? ` · ${rec.recyclable_pct}% recyclable, ${rec.non_recyclable_pct}% non-recyclable` : ""}`, { shipment_id: sh.id, classification_id: cls.id });
   if (res.confidence < 0.8) {
     await raiseAlert({ severity: "warning", type: "low_classification_confidence", title: "Low classification confidence", message: `${sh.code} classified at ${(res.confidence * 100).toFixed(0)}% confidence — operator review required before dispatch.`, entity_type: "shipment", entity_id: sh.id });
   }
@@ -269,6 +270,30 @@ export async function effectiveComposition(shipmentId: number) {
   return { classification: cls, composition: (cls.corrected ?? cls.composition) as Record<Stream, number> };
 }
 
+/** Upcycle category -> the composition stream it is taken out of. */
+export const UPCYCLE_STREAM: Record<string, Stream> = { textile: "other", glass_container: "other", pet_bottle: "plastic", hdpe_container: "plastic", cardboard: "paper" };
+
+/**
+ * Waste hierarchy split of every stream of a shipment: upcycle lots set aside at the hub come
+ * out first, then the recyclable share (from the recyclability model) goes to material recovery,
+ * and only the rest is a candidate for energy recovery or landfill.
+ */
+export async function streamSplit(shipmentId: number, eff: { classification: any; composition: Record<Stream, number> }, totalKg: number) {
+  const lots = await query<any>("SELECT category, SUM(kg) AS kg FROM upcycle_lots WHERE shipment_id=$1 AND status<>'fallback' GROUP BY category", [shipmentId]);
+  const byStream: Record<string, any> = Object.fromEntries((eff.classification.recyclability?.by_stream ?? []).map((b: any) => [b.stream, b]));
+  const out: Record<string, { kg: number; upcycle_kg: number; recyclable_kg: number; energy_kg: number; recyclable_share: number }> = {};
+  for (const s of STREAMS) {
+    const kg = totalKg * (eff.composition[s] ?? 0);
+    const up = Math.min(kg, lots.filter((l) => UPCYCLE_STREAM[l.category] === s).reduce((a, l) => a + Number(l.kg), 0));
+    // Only plastic and paper are split here: metal is already all material recovery, organic is biodegradable,
+    // and `other` (inert, glass, textiles) has no MRF buyer at scale.
+    const share = s === "plastic" || s === "paper" ? (byStream[s]?.recyclable_share ?? 0) : 0;
+    const rec = (kg - up) * share;
+    out[s] = { kg: round(kg, 1), upcycle_kg: round(up, 1), recyclable_kg: round(rec, 1), energy_kg: round(kg - up - rec, 1), recyclable_share: share };
+  }
+  return out;
+}
+
 // ---------------------------------------------------------------- 4/5. ENERGY PREDICTION + FACILITY OPTIMIZATION
 export async function facilityCandidates(origin: { lat: number; lng: number }, stream: string) {
   const rows = await query<any>(
@@ -298,18 +323,19 @@ export async function predictPathways(shipmentId: number) {
   if (!eff) throw new HttpError(409, "Shipment must be classified first");
   const kg = sh.measured_kg ?? sh.total_kg;
   const facilities = await query<any>("SELECT technology, COUNT(*)::int AS n FROM facilities WHERE status='online' GROUP BY technology");
+  const split = await streamSplit(shipmentId, eff, kg);
   const out: any[] = [];
   for (const stream of STREAMS) {
-    const skg = kg * (eff.composition[stream] ?? 0);
+    const skg = split[stream].energy_kg;
     if (skg < 1) continue;
     const res = await ai.predictEnergy({
       stream, kg: round(skg, 1), moisture_pct: sh.moisture_pct, month: new Date().getMonth() + 1,
       available_technologies: facilities.map((f) => f.technology),
     });
-    out.push(res);
+    out.push({ ...res, upcycle_kg: split[stream].upcycle_kg, recyclable_kg: split[stream].recyclable_kg, stream_kg: split[stream].kg });
   }
   await publish("EnergyPotentialCalculated", `${sh.code}: energy pathways evaluated for ${out.length} streams`, { shipment_id: sh.id });
-  return { shipment: sh, composition: eff.composition, classification_id: eff.classification.id, streams: out };
+  return { shipment: sh, composition: eff.composition, classification_id: eff.classification.id, streams: out, split, recyclability: eff.classification.recyclability ?? null };
 }
 
 /** Rank every eligible facility for each energy stream and record an explainable AI decision. */
@@ -323,9 +349,33 @@ export async function optimizeDestination(shipmentId: number) {
 
   const weights = await getSetting("optimizer_weights", DEFAULT_WEIGHTS);
   const kg = sh.measured_kg ?? sh.total_kg;
+  const split = await streamSplit(shipmentId, eff, kg);
   const decisions: any[] = [];
   for (const stream of STREAMS) {
-    const skg = round(kg * (eff.composition[stream] ?? 0), 1);
+    // Recyclable plastic / paper → MRF first (waste hierarchy: material recovery before energy recovery).
+    const recKg = split[stream].recyclable_kg;
+    if (recKg >= 5 && ENERGY_STREAMS.includes(stream)) {
+      const mrf = (await facilityCandidates(sh, stream)).filter((f) => f.status === "online" && f.technology === "material_recovery")
+        .sort((a, b) => a.distance_km - b.distance_km)[0];
+      const d = await insert<any>("ai_decisions", {
+        code: await nextCode("ai_decisions", "AI", 7000), kind: "pathway", shipment_id: sh.id,
+        subject: `${round(recKg, 0)} kg recyclable ${stream} — Recycling`, chosen_facility_id: mrf?.id ?? null,
+        inputs: { stream, fraction: "recyclable", quantity_kg: recKg, recyclable_share: split[stream].recyclable_share },
+        output: { pathway: "Recycling", facility: mrf?.label ?? null, energy_kwh: 0 },
+        explanation: {
+          headline: `Recyclable ${stream} (${Math.round(split[stream].recyclable_share * 100)}%) sent to recycling${mrf ? ` at ${mrf.label}` : ""}, not burned`,
+          bullets: [
+            `${round(recKg, 0)} of ${round(split[stream].kg - split[stream].upcycle_kg, 0)} kg classified recyclable (${eff.classification.recyclability?.method ?? "stream prior"})`,
+            "Waste hierarchy: recycling saves more energy and CO2 than recovering its calorific value",
+            mrf ? `Nearest MRF accepting ${stream}: ${mrf.label}, ${mrf.distance_km} km` : "No MRF online — hold at hub",
+            `Only the non-recyclable ${round(split[stream].energy_kg, 0)} kg goes to energy recovery`,
+          ],
+        },
+        confidence: eff.classification.confidence, score: null, status: "proposed", model_version: "recyclability-v1",
+      });
+      decisions.push(d);
+    }
+    const skg = ENERGY_STREAMS.includes(stream) ? split[stream].energy_kg : round(split[stream].kg - split[stream].upcycle_kg, 1);
     if (skg < 5) continue;
     if (!ENERGY_STREAMS.includes(stream)) {
       // Material streams: pathway decision (recycling / material recovery / residual), no energy model involved.

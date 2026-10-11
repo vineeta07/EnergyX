@@ -16,6 +16,8 @@ import { aiRouter } from "./api/intelligence.ts";
 import { platformRouter } from "./api/platform.ts";
 import { internalRouter } from "./api/internal.ts";
 import { plannerRouter } from "./api/planner.ts";
+import { circularRouter } from "./api/circular.ts";
+import { seedCircular } from "./services/circular.ts";
 import { attachSocket, subscribe } from "./services/events.ts";
 import { initRoads, ensureRoadMatrix } from "./services/roads.ts";
 import { startFleetSimulator } from "./workers/fleet.ts";
@@ -25,6 +27,11 @@ async function main() {
   await initDb();
   if (await seed(false)) console.log("[db] Seeded Delhi network (real zones & facilities; simulated daily operations)");
   await initRoads();
+  try {
+    if (await seedCircular()) console.log("[db] Seeded circular-economy partners and demo battery lots");
+  } catch (e: any) {
+    console.warn("[db] circular seed deferred:", e.message); // needs the AI service for battery reference data
+  }
   // New fixed points get real road distances too.
   for (const t of ["WasteSourceRegistered", "FacilityRegistered"] as const) {
     subscribe(t, () => { ensureRoadMatrix().catch((e) => console.warn("[roads] refresh failed:", e.message)); });
@@ -45,7 +52,7 @@ async function main() {
   // Public endpoints (landing/impact pages)
   app.use("/api", (req, res, next) => (req.path.startsWith("/public/") ? platformRouter(req, res, next) : next()));
   // Everything else requires a valid JWT; per-route RBAC inside routers.
-  app.use("/api", requireAuth, networkRouter, opsRouter, aiRouter, platformRouter, plannerRouter);
+  app.use("/api", requireAuth, networkRouter, opsRouter, aiRouter, platformRouter, plannerRouter, circularRouter);
   app.use("/internal", requireService, internalRouter);
   app.use((_req, res) => res.status(404).json({ error: "Not found" }));
   app.use(errorHandler);

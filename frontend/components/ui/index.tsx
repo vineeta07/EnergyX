@@ -63,6 +63,8 @@ const STATUS_TONE: Record<string, Tone> = {
   online: "green", maintenance: "warn", offline: "crit", idle: "neutral", assigned: "cyan", en_route: "cyan",
   open: "warn", acknowledged: "neutral", resolved: "green", running: "cyan", failed: "crit", archived: "neutral",
   paused: "neutral",
+  identified: "warn", matched: "cyan", received: "cyan", upcycled: "green", fallback: "neutral",
+  graded: "cyan", untested: "neutral", in_pack: "green", to_recycling: "crit", designed: "warn", assembled: "cyan", deployed: "green", retired: "neutral",
 };
 export function Status({ s }: { s: string }) {
   return <Badge tone={STATUS_TONE[s] ?? "neutral"}>{s.replace(/_/g, " ")}</Badge>;
