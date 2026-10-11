@@ -65,6 +65,8 @@ const STATUS_TONE: Record<string, Tone> = {
   online: "green", maintenance: "warn", offline: "crit", idle: "neutral", assigned: "blue", en_route: "blue",
   open: "warn", acknowledged: "neutral", resolved: "green", running: "blue", failed: "crit", archived: "neutral",
   paused: "neutral",
+  identified: "warn", matched: "cyan", received: "cyan", upcycled: "green", fallback: "neutral",
+  graded: "cyan", untested: "neutral", in_pack: "green", to_recycling: "crit", designed: "warn", assembled: "cyan", deployed: "green", retired: "neutral",
 };
 export function Status({ s }: { s: string }) {
   return <Badge tone={STATUS_TONE[s] ?? "neutral"}>{tEnum(s)}</Badge>;

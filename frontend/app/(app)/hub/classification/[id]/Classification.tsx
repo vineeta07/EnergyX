@@ -10,6 +10,7 @@ import { Badge, Button, ErrorBox, Loading, PageHeader, Panel, SimTag, Status, Td
 import { CompositionBar } from "@/components/charts";
 import { DecisionView } from "@/features/decisions/DecisionView";
 import { BUSINESS_LABEL, cx, kg, kwh, n, pct, STREAM_COLOR, STREAM_LABEL, STREAMS, TECH_LABEL, dateTime, NONE } from "@/lib/format";
+import { RecyclabilityPanel } from "@/features/circular/RecyclabilityPanel";
 
 import { t, tEnum } from "@/lib/i18n";
 export function Classification({ id }: { id: string }) {
@@ -80,6 +81,8 @@ export function Classification({ id }: { id: string }) {
 
         {cls ? <ClassificationPanel cls={cls} total={total} canAct={canAct} /> : <Panel title={t("Sort result")}><div className="py-10 text-center text-sm text-ink-3">{t("This load has not been sorted yet.")}</div></Panel>}
       </div>
+
+      {cls?.recyclability && <RecyclabilityPanel shipmentId={sh.id} rec={cls.recyclability} canAct={canAct} locked={data.decisions.length > 0} />}
 
       {comp && cls.status !== "pending_review" && (
         <Panel title={t("Energy prediction")} subtitle={t("Expected useful energy for each stream and technology. The model assumes an average plant, and figures taken from the literature are flagged.")}
@@ -174,7 +177,7 @@ function ClassificationPanel({ cls, total, canAct }: { cls: any; total: number; 
             {cls.vision.photos.map((p: any, i: number) => (
               <div key={i} className={cx("flex items-center justify-between rounded border px-2 py-1.5 text-xs", p.needs_review ? "border-warn/40 bg-warn/5" : "border-line")}>
                 <span className="truncate"><span className="num text-ink-3">#{i + 1}</span> {tEnum(p.top[0].label)} <span className="text-ink-3">· {STREAM_LABEL[p.stream] ?? p.stream}</span></span>
-                <span className="num shrink-0 pl-2">{(p.confidence * 100).toFixed(0)}%{p.needs_review ? ` · ${t("review")}` : p.weight < 1 ? ` · ${t("half weight")}` : ""}</span>
+                <span className="flex shrink-0 items-center gap-1.5 pl-2">{p.recyclable != null && <span className={cx("rounded px-1 text-[10px]", p.recyclable ? "bg-cyan/15 text-cyan" : "bg-raised text-ink-3")} title={p.recyclability_reason}>{p.recyclable ? t("recyclable") : p.p_biodegradable > 0.5 ? t("biodegradable") : t("non-recyclable")}</span>}<span className="num">{(p.confidence * 100).toFixed(0)}%{p.needs_review ? ` · ${t("review")}` : p.weight < 1 ? ` · ${t("half weight")}` : ""}</span></span>
               </div>
             ))}
           </div>
@@ -226,7 +229,7 @@ function Pathways({ p }: { p: any }) {
       <div className="grid gap-4 lg:grid-cols-2">
         {streams.map((s: any) => (
           <div key={s.stream} className="rounded-md border border-line p-3">
-            <div className="mb-2 flex items-center justify-between text-sm"><span className="flex items-center gap-2"><span className="size-2 rounded-sm" style={{ background: STREAM_COLOR[s.stream] }} /><span className="font-medium">{STREAM_LABEL[s.stream]}</span> <span className="num text-ink-3">{kg(s.kg)}</span></span><span className="text-xs text-accent">→ {TECH_LABEL[s.recommended] ?? NONE}</span></div>
+            <div className="mb-2 flex items-center justify-between text-sm"><span className="flex items-center gap-2"><span className="size-2 rounded-sm" style={{ background: STREAM_COLOR[s.stream] }} /><span className="font-medium">{STREAM_LABEL[s.stream]}</span> <span className="num text-ink-3">{kg(s.kg)}</span>{(s.recyclable_kg > 0 || s.upcycle_kg > 0) && <span className="text-[11px] text-cyan">{s.recyclable_kg > 0 && `+${kg(s.recyclable_kg)} ${t("recyclable")} → MRF`}{s.upcycle_kg > 0 && ` +${kg(s.upcycle_kg)} ${t("upcycled")}`}</span>}</span><span className="text-xs text-accent">→ {TECH_LABEL[s.recommended] ?? NONE}</span></div>
             <div className="space-y-1.5">
               {s.options.map((o: any, i: number) => (
                 <div key={o.technology} className={cx("grid grid-cols-[18px_1fr_90px] items-center gap-2 rounded px-2 py-1.5 text-xs", o.technology === s.recommended ? "bg-accent/10" : "")}>

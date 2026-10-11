@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   LayoutDashboard, Factory, Truck, Route, Warehouse, Scale, Zap, BarChart3, Cpu, Bell, Settings, ShieldCheck,
-  LogOut, MessageSquareText, Play, Menu, X, Recycle, Map as MapIcon, CircleHelp,
+  LogOut, MessageSquareText, Play, Menu, X, Recycle, Map as MapIcon, CircleHelp, Shirt, BatteryCharging,
 } from "lucide-react";
 import { Logo } from "./Logo";
 import { LangSwitcher, ThemeToggle } from "./Prefs";
@@ -29,6 +29,8 @@ const NAV: NavItem[] = [
   { href: "/routes", label: "Routes", icon: Route, roles: ["fleet", "admin"] },
   { href: "/hub", label: "Processing hub", icon: Warehouse, roles: ["hub", "admin"] },
   { href: "/ai-decisions", label: "Plant decisions", icon: Scale, roles: ["hub", "admin", "facility"] },
+  { href: "/upcycling", label: "Upcycling", icon: Shirt, roles: ["hub", "admin", "facility"] },
+  { href: "/batteries", label: "Battery second life", icon: BatteryCharging, roles: ["hub", "admin", "facility"] },
   { href: "/planner", label: "City plan", icon: MapIcon, roles: ["admin", "hub", "fleet"] },
   { href: "/facilities", label: "Facilities", icon: Recycle },
   { href: "/energy", label: "Energy", icon: Zap },

@@ -10,6 +10,11 @@ WASTE NETWORK → COLLECTION OPTIMIZATION → PROCESSING HUB → AI CHARACTERIZA
 
 > **New here?** Read the **[detailed user & system guide](docs/USER_GUIDE.md)**. It walks through every role's flow screen by screen, what each button calls, and what every function does. The models, their data contracts and the plan to move to real data are in **[docs/AI_SCHEMA.md](docs/AI_SCHEMA.md)**.
 
+Beside the energy loop, three **circular-economy flows** apply the waste hierarchy (reuse > recycle > energy > landfill). Details are in **[docs/CIRCULAR.md](docs/CIRCULAR.md)**:
+- **Recyclable vs non-recyclable:** every photo and every load is split. Recyclable plastic and paper go to an MRF, and only the rest is ranked for energy recovery.
+- **Upcycling:** textiles, glass jars, PET/HDPE containers and cardboard are set aside at the hub. The AI matches each lot to an upcycling partner (value, CO2e, learned acceptance), and partner receipts feed that acceptance back.
+- **Battery second life (e-waste):** discarded cells, modules and e-rickshaw batteries are tested and graded, then the AI combines the healthy ones into balanced storage packs with OR-Tools CP-SAT. Deployed packs report telemetry that corrects the fade-rate prior. Rejects go to an authorised recycler.
+
 The platform does not send waste to the nearest facility. It sends it where it maximizes **useful energy**, net of transport cost, carbon, and capacity.
 
 ## Architecture
@@ -31,6 +36,9 @@ The browser only talks to Next.js, which proxies `/api` to Node. Node calls the 
 | 3 | Energy yield | LightGBM on kWh/kg with leakage-safe historical facility yield, 90% intervals, calibrated confidence | MAPE ≈ 6.9%, R² 0.99 vs 7.5% historical-yield baseline |
 | 4 | Destination optimization | Configurable weighted utility over eligible facilities, plus Monte-Carlo decision stability | Rule-based by design (auditable) |
 | 5 | Route optimization | OR-Tools CVRP, soft time windows, urgency penalties, guided local search | Distance saved vs individual trips is reported per route |
+| 6 | Recyclability | Item-level labels for the 30 vision classes + per-stream Beta prior updated by photos | Prior is an assumption until audited loads exist (docs/CIRCULAR.md) |
+| 7 | Upcycling match | Weighted utility over partners + Beta-learned acceptance per partner | Learns from every partner receipt |
+| 8 | Battery grading & pack design | Safety/SoH/IR grading, remaining-cycle model, CP-SAT capacity balancing of series groups | e.g. 0.04% group imbalance vs 11% unmatched; fade prior learned from telemetry |
 
 Training pipeline (`ml/pipelines/train.py`): raw export → snapshot → validation → cleaning (missing days, robust-z outliers) → features → split → train → evaluate against naive baselines → versioned artifact → registry → callback to the API. Feedback rows are then marked as consumed. Retraining is triggered by bootstrap, the Retrain buttons, the nightly schedule, or the feedback-volume rule. Models never "self-train."
 
@@ -211,4 +219,5 @@ Contracts **freeze at the start of phase 3**. After that, only fixes go in.
 - **Simulated data (labelled):** day-to-day tonnage around each zone's published average, individual transfer loads, hubs, trucks, per-load composition variation and plant meter readings. Meter readings are calibrated so each plant averages its published MW ÷ TPD. No public Delhi source publishes these at that granularity. Every generated row is flagged `is_simulated`.
 - **Waste photos:** classified by the pretrained `Darshan764/waste-classification-v2` model. On independent real photos it scores 62–79% (79–91% when confident); see `docs/AI_SCHEMA.md`.
 - **Distances:** real road distances and drive times from OpenStreetMap via OSRM, cached in `road_distances`. Points without a cached pair fall back to great-circle × 1.25. Amazon Location Service would replace OSRM in AWS mode.
+- **Circular flows:** recyclability priors, upcycling CO2e factors and prices, battery fade, cost and embodied-CO2 constants are documented assumptions (docs/CIRCULAR.md). Battery tester readings, pack telemetry and upcycling partners are simulated in demo mode and labelled. Second-life packs *store* electricity; they do not generate it.
 - **Emission factors:** 0.71 kg CO₂/kWh grid and 0.45 kg CO₂e/kg organic landfill. These are shown on `/impact`. Replace them with official factors for production.

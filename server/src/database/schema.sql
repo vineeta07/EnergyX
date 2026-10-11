@@ -385,3 +385,140 @@ CREATE TABLE IF NOT EXISTS road_distances (
   source  TEXT NOT NULL DEFAULT 'osrm',
   PRIMARY KEY (a_key, b_key)
 );
+
+-- v5: circular economy — recyclability, upcycling, battery second life
+ALTER TABLE waste_classifications ADD COLUMN IF NOT EXISTS recyclability JSONB;
+
+-- Upcycling partners and authorised battery recyclers (demo partners, flagged is_simulated)
+CREATE TABLE IF NOT EXISTS circular_partners (
+  id               SERIAL PRIMARY KEY,
+  code             TEXT NOT NULL UNIQUE,
+  name             TEXT NOT NULL,
+  kind             TEXT NOT NULL CHECK (kind IN ('upcycler','battery_recycler')),
+  lat              DOUBLE PRECISION NOT NULL,
+  lng              DOUBLE PRECISION NOT NULL,
+  prices           JSONB NOT NULL DEFAULT '{}',   -- INR per kg the partner pays, by category
+  capacity_kg_week DOUBLE PRECISION NOT NULL,
+  received_kg      DOUBLE PRECISION NOT NULL DEFAULT 0,  -- feedback: drives the learned acceptance rate
+  accepted_kg      DOUBLE PRECISION NOT NULL DEFAULT 0,
+  products         TEXT,
+  status           TEXT NOT NULL DEFAULT 'active',
+  is_simulated     BOOLEAN NOT NULL DEFAULT true,
+  created_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS upcycle_lots (
+  id             SERIAL PRIMARY KEY,
+  code           TEXT NOT NULL UNIQUE,
+  hub_id         INT NOT NULL REFERENCES processing_hubs(id),
+  shipment_id    INT REFERENCES shipments(id),
+  category       TEXT NOT NULL CHECK (category IN ('textile','glass_container','pet_bottle','hdpe_container','cardboard')),
+  kg             DOUBLE PRECISION NOT NULL,
+  items          INT,
+  notes          TEXT,
+  status         TEXT NOT NULL DEFAULT 'identified'
+                 CHECK (status IN ('identified','matched','in_transit','received','upcycled','fallback')),
+  partner_id     INT REFERENCES circular_partners(id),
+  match          JSONB,
+  accepted_kg    DOUBLE PRECISION,
+  rejected_kg    DOUBLE PRECISION,
+  products       TEXT,
+  units_made     INT,
+  revenue_inr    DOUBLE PRECISION,
+  co2_avoided_kg DOUBLE PRECISION,
+  created_by     INT REFERENCES users(id),
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS battery_lots (
+  id           SERIAL PRIMARY KEY,
+  code         TEXT NOT NULL UNIQUE,
+  hub_id       INT REFERENCES processing_hubs(id),
+  source_label TEXT NOT NULL,
+  chemistry    TEXT NOT NULL CHECK (chemistry IN ('li_nmc','li_lfp','lead_acid')),
+  unit_type    TEXT NOT NULL CHECK (unit_type IN ('cell','module','block')),
+  nominal_v    DOUBLE PRECISION NOT NULL,
+  nominal_ah   DOUBLE PRECISION NOT NULL,
+  unit_kg      DOUBLE PRECISION NOT NULL,
+  unit_count   INT NOT NULL,
+  ir_ref_mohm  DOUBLE PRECISION,
+  status       TEXT NOT NULL DEFAULT 'received' CHECK (status IN ('received','graded','processed')),
+  is_simulated BOOLEAN NOT NULL DEFAULT false,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS battery_packs (
+  id               SERIAL PRIMARY KEY,
+  code             TEXT NOT NULL UNIQUE,
+  chemistry        TEXT NOT NULL,
+  application      TEXT NOT NULL,
+  config           TEXT NOT NULL,
+  units_used       INT NOT NULL,
+  nominal_v        DOUBLE PRECISION NOT NULL,
+  capacity_ah      DOUBLE PRECISION NOT NULL,
+  usable_kwh       DOUBLE PRECISION NOT NULL,
+  imbalance_pct    DOUBLE PRECISION,
+  pack_soh         DOUBLE PRECISION NOT NULL,
+  fade_pred        DOUBLE PRECISION NOT NULL,
+  predicted_cycles INT,
+  design           JSONB NOT NULL,
+  status           TEXT NOT NULL DEFAULT 'designed' CHECK (status IN ('designed','assembled','deployed','retired')),
+  site_name        TEXT,
+  lat              DOUBLE PRECISION,
+  lng              DOUBLE PRECISION,
+  cycles           DOUBLE PRECISION NOT NULL DEFAULT 0,
+  soh_now          DOUBLE PRECISION,
+  delivered_kwh    DOUBLE PRECISION NOT NULL DEFAULT 0,
+  fade_observed    DOUBLE PRECISION,
+  sim_params       JSONB,
+  created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+  deployed_at      TIMESTAMPTZ
+);
+
+CREATE TABLE IF NOT EXISTS battery_units (
+  id               SERIAL PRIMARY KEY,
+  lot_id           INT NOT NULL REFERENCES battery_lots(id) ON DELETE CASCADE,
+  serial           TEXT NOT NULL,
+  chemistry        TEXT NOT NULL,
+  nominal_v        DOUBLE PRECISION NOT NULL,
+  nominal_ah       DOUBLE PRECISION NOT NULL,
+  measured_ah      DOUBLE PRECISION,
+  ir_mohm          DOUBLE PRECISION,
+  voltage          DOUBLE PRECISION,
+  swelling         BOOLEAN NOT NULL DEFAULT false,
+  leakage          BOOLEAN NOT NULL DEFAULT false,
+  soh              DOUBLE PRECISION,
+  ir_ratio         DOUBLE PRECISION,
+  grade            TEXT CHECK (grade IN ('A','B','R')),
+  remaining_cycles INT,
+  fade_per_cycle   DOUBLE PRECISION,
+  reason           TEXT,
+  status           TEXT NOT NULL DEFAULT 'untested' CHECK (status IN ('untested','graded','in_pack','to_recycling')),
+  pack_id          INT REFERENCES battery_packs(id),
+  is_simulated     BOOLEAN NOT NULL DEFAULT false
+);
+CREATE INDEX IF NOT EXISTS idx_battery_units_lot ON battery_units(lot_id);
+
+CREATE TABLE IF NOT EXISTS pack_telemetry (
+  id             SERIAL PRIMARY KEY,
+  pack_id        INT NOT NULL REFERENCES battery_packs(id) ON DELETE CASCADE,
+  day            DATE NOT NULL,
+  discharged_kwh DOUBLE PRECISION NOT NULL,
+  cycles_cum     DOUBLE PRECISION NOT NULL,
+  soh            DOUBLE PRECISION NOT NULL,
+  is_simulated   BOOLEAN NOT NULL DEFAULT true
+);
+CREATE INDEX IF NOT EXISTS idx_pack_telemetry_pack ON pack_telemetry(pack_id, day);
+
+CREATE TABLE IF NOT EXISTS battery_recycling (
+  id         SERIAL PRIMARY KEY,
+  code       TEXT NOT NULL UNIQUE,
+  lot_id     INT REFERENCES battery_lots(id),
+  partner_id INT REFERENCES circular_partners(id),
+  chemistry  TEXT NOT NULL,
+  units      INT NOT NULL,
+  kg         DOUBLE PRECISION NOT NULL,
+  recovered  JSONB NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);

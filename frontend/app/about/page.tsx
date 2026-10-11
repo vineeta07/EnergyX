@@ -27,19 +27,20 @@ const MODELS = [
 ] as const;
 
 const AWS = [
-  ["CloudFront", "Serves the web app and routes /api"],
-  ["ALB and ECS Fargate", "Node.js API: sign-in, data, the pipeline, WebSockets"],
-  ["ECS Fargate (private)", "Python service: prediction, routing, the assistant"],
-  ["RDS PostgreSQL with PostGIS", "Main database, same schema as the local one"],
-  ["S3", "Waste photos, dataset snapshots, model files"],
-  ["SageMaker", "Training jobs and model registry for the three learned models"],
-  ["EventBridge", "Event bus and scheduled retraining"],
-  ["SQS", "Queues for training and notifications"],
-  ["ElastiCache Redis", "KPI cache, revoked tokens, rate limits"],
-  ["Amazon Location Service", "Map tiles and the route matrix (OpenStreetMap locally)"],
-  ["IoT Core", "Truck GPS and plant meter feeds (a simulator in the demo)"],
-  ["CloudWatch", "Logs, metrics and model-drift alarms"],
-] as const;
+  ["CloudFront", "Next.js frontend + /api path routing"],
+  ["ALB → ECS Fargate", "Node.js API (Express) — auth, data, orchestration, WebSockets"],
+  ["ECS Fargate (private)", "Python AI service (FastAPI) — inference, OR-Tools, assistant"],
+  ["RDS PostgreSQL + PostGIS", "Operational DB (same schema as local embedded Postgres)"],
+  ["S3", "Waste images (presigned URLs), dataset snapshots, model artifacts"],
+  ["Amazon Bedrock", "Claude for the WattCycle Intelligence assistant (tool calls into live data)"],
+  ["SageMaker (planned)", "Training jobs once real data needs GPU-scale training; today the AI service trains in-process and versions to S3"],
+  ["EventBridge", "Domain-event bus for every step of the loop, archived; feedback events to CloudWatch"],
+  ["CodeBuild + ECR", "Builds the three container images in AWS from the GitHub repo"],
+  ["ElastiCache Redis (planned)", "Shared cache and token revocation when the API scales past one task"],
+  ["Amazon Location Service (planned)", "Route matrix + tiles (drop-in for the OSRM / OpenStreetMap road matrix used today)"],
+  ["IoT Core (planned)", "Vehicle GPS & facility meter telemetry (replaces the demo simulator)"],
+  ["CloudWatch", "Logs, metrics, model-drift alarms"],
+];
 
 export default function About() {
   return (

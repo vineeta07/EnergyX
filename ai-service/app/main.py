@@ -17,7 +17,9 @@ from fastapi.responses import JSONResponse
 
 from app import assistant
 from app.config import SERVICE_KEY
-from app.schemas import (AssistantIn, ClassifyImageIn, ClassifyIn, ForecastIn, PathwayIn, PlanIn, RankIn, RoutesIn, TrainIn)
+from app.schemas import (AssistantIn, ClassifyImageIn, ClassifyIn, DesignPackIn, FadeUpdateIn, ForecastIn, GradeIn, PathwayIn, PlanIn, RankIn,
+                         RoutesIn, TrainIn, UpcycleMatchIn)
+from ml.circular import battery, upcycle
 from ml.inference import predict, vision
 from ml.inference.predict import ModelNotReady
 from ml.models import registry
@@ -68,7 +70,7 @@ async def timing(request: Request, call_next):
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "models": {**registry.status(), "vision": {"loaded": vision.available(), "version": vision.MODEL_ID if vision.available() else None, "algorithm": vision.info()["architecture"]}}}
+    return {"status": "ok", "assistant": assistant.provider_info(), "artifacts": registry.remote_info(), "models": {**registry.status(), "vision": {"loaded": vision.available(), "version": vision.MODEL_ID if vision.available() else None, "algorithm": vision.info()["architecture"]}}}
 
 
 @app.post("/v1/forecast", dependencies=[Depends(service_auth)])
@@ -107,6 +109,35 @@ async def optimize_routes(body: RoutesIn):
 @app.post("/v1/plan-city", dependencies=[Depends(service_auth)])
 async def plan_city(body: PlanIn):
     return await run_in_threadpool(city_plan.plan, [z.model_dump() for z in body.zones], [f.model_dump() for f in body.facilities], body.dist)
+
+
+@app.post("/v1/circular/upcycle-match", dependencies=[Depends(service_auth)])
+def upcycle_match(body: UpcycleMatchIn):
+    return upcycle.match(body.category, body.kg, [p.model_dump() for p in body.partners])
+
+
+@app.post("/v1/batteries/grade", dependencies=[Depends(service_auth)])
+def battery_grade(body: GradeIn):
+    return battery.grade([u.model_dump() for u in body.units], body.fade_priors)
+
+
+@app.post("/v1/batteries/design-pack", dependencies=[Depends(service_auth)])
+async def battery_design(body: DesignPackIn):
+    try:
+        return await run_in_threadpool(battery.design_pack, [u.model_dump() for u in body.units], body.application, body.target_kwh)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.post("/v1/batteries/update-fade", dependencies=[Depends(service_auth)])
+def battery_fade(body: FadeUpdateIn):
+    return battery.update_fade(body.chemistry, body.prior_fade, body.prior_n, [p.model_dump() for p in body.packs])
+
+
+@app.get("/v1/batteries/reference", dependencies=[Depends(service_auth)])
+def battery_reference():
+    return {"chemistries": {k: {kk: vv for kk, vv in v.items()} for k, v in battery.CHEM.items()}, "applications": battery.APPLICATIONS,
+            "eol_soh": battery.EOL_SOH, "grades": {"A": battery.GRADE_A_SOH, "B": battery.GRADE_B_SOH}}
 
 
 @app.post("/v1/train", dependencies=[Depends(service_auth)], status_code=202)

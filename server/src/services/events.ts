@@ -2,6 +2,7 @@ import { EventEmitter } from "node:events";
 import type { WebSocket } from "ws";
 import { insert } from "../database/db.ts";
 import { cache } from "./cache.ts";
+import { enqueue as toEventBridge } from "./eventbridge.ts";
 
 /**
  * Domain event bus. Every important state transition in the closed loop is
@@ -17,7 +18,10 @@ export type DomainEventType =
   | "ClassificationReviewed" | "EnergyPotentialCalculated" | "FacilitySelected" | "DestinationApproved"
   | "WasteDispatched" | "EnergyGenerationCompleted" | "ActualOutputRecorded" | "AITrainingDataCreated"
   | "ModelRetrainingStarted" | "ModelRetrained" | "AlertRaised" | "WasteSourceRegistered" | "FacilityRegistered"
-  | "VehiclePositions" | "DemoStage";
+  | "VehiclePositions" | "DemoStage"
+  | "UpcycleLotCreated" | "UpcycleMatched" | "UpcycleDispatched" | "UpcycleReceived" | "UpcycleCompleted"
+  | "BatteryLotReceived" | "BatteriesGraded" | "BatteryPackDesigned" | "BatteryPackAssembled" | "BatteryPackDeployed"
+  | "BatteryTelemetry" | "BatteryFadeUpdated" | "BatteriesSentToRecycling";
 
 export interface DomainEvent { id?: number; type: DomainEventType; message: string; payload?: any; created_at?: string }
 
@@ -41,7 +45,10 @@ export async function publish(type: DomainEventType, message: string, payload: a
   const ev: DomainEvent = ephemeral
     ? { type, message, payload, created_at: new Date().toISOString() }
     : await insert<DomainEvent>("events", { type, message, payload });
-  if (!ephemeral) cache.invalidate("dashboard");
+  if (!ephemeral) {
+    cache.invalidate("dashboard");
+    toEventBridge(type, { id: ev.id, message, payload, at: ev.created_at }); // no-op unless EVENT_BUS_NAME is set
+  }
   broadcast({ kind: "event", event: ev });
   bus.emit(type, ev);
   bus.emit("*", ev);

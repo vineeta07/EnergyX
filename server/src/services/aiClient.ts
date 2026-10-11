@@ -37,5 +37,10 @@ export const ai = {
   optimizeRoutes: (body: unknown) => call<any>("/v1/optimize-routes", body, 30_000),
   train: (body: unknown) => call<any>("/v1/train", body, 10_000),
   planCity: (body: unknown) => call<any>("/v1/plan-city", body, 30_000),
+  upcycleMatch: (body: unknown) => call<any>("/v1/circular/upcycle-match", body),
+  gradeBatteries: (body: unknown) => call<any>("/v1/batteries/grade", body, 30_000),
+  designPack: (body: unknown) => call<any>("/v1/batteries/design-pack", body, 30_000),
+  updateFade: (body: unknown) => call<any>("/v1/batteries/update-fade", body),
+  batteryReference: () => call<any>("/v1/batteries/reference", undefined, 5000, "GET"),
   assistant: (body: unknown) => call<any>("/v1/assistant/chat", body, 90_000),
 };
