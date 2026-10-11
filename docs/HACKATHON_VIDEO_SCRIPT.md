@@ -1,4 +1,4 @@
-# WattCycle — Hackathon Video Script (≈ 6 minutes)
+# WattCycle — Hackathon Video Script (≈ 6½ minutes)
 
 **Goal of the video:** show one closed loop, from waste to energy to feedback, running live on AWS, and make clear *what each AWS service does* and *why we chose it*.
 
@@ -106,7 +106,7 @@ Images built by CodeBuild → ECR · secrets in Secrets Manager · logs in Cloud
 
 ---
 
-## 4:15 – 5:30 · How we use AWS (console tour)
+## 4:15 – 6:00 · How we use AWS (console tour)
 
 Go through the tabs quickly, about 8–10 seconds each. **B** speaks over all of it.
 
@@ -132,10 +132,22 @@ Go through the tabs quickly, about 8–10 seconds each. **B** speaks over all of
    > "All container logs and Container Insights in one place. Here you can see the AI service training three models in eight seconds on startup."
 10. **GitHub** → `infra/terraform`:
     > "And all of it (network, NAT, load balancer, containers, database, CloudFront) is **Terraform**: one command to deploy, one command to destroy."
+11. **SageMaker: what we wanted, and why it isn't live yet** (about 30 s)
+
+    **SHOW:** AWS Console → **Service Quotas** → Amazon SageMaker, searched for `training job usage`. The values read **0**. Then cut to the architecture diagram, with a dotted box labelled *SageMaker (next)*.
+
+    **SAY (B):**
+    > "We did plan for **Amazon SageMaker**, and here's honestly why it isn't in this build.
+    > Our AWS account is a restricted one. An organization policy limits it to the Sydney region, and the SageMaker **training-job quota is zero**. You can see it right here. So we couldn't run SageMaker Training Jobs. We trained our models inside the AI container instead. That's fine at our scale: all three tabular models retrain in about **eight seconds** on a CPU, and every version is saved to S3.
+    > Where SageMaker fits next, and the code is already shaped for it:
+    > **One:** a **SageMaker Serverless Inference** endpoint for our two image models, the 30-class item classifier and the YOLOv8 bag detector. Photo uploads come in bursts, and serverless scales with them and costs nothing while idle, instead of reserving four gigabytes in an always-on container.
+    > **Two:** **SageMaker Training Jobs and Pipelines** for retraining, once we have real data at scale and a GPU. Our pipeline already runs as fixed steps (validate, clean, train, evaluate against baselines, register), which maps one-to-one onto a SageMaker Pipeline.
+    > **Three:** the **SageMaker Model Registry** to replace our S3 version folders, with approval before a model goes live.
+    > Our feedback loop already produces the labelled data those jobs need: every predicted-versus-actual result lands in the database and on EventBridge."
 
 ---
 
-## 5:30 – 6:00 · Impact + close
+## 6:00 – 6:30 · Impact + close
 
 **SHOW:** **City Planner** page → the optimized vs current comparison. End on the Impact page.
 
@@ -151,8 +163,8 @@ Go through the tabs quickly, about 8–10 seconds each. **B** speaks over all of
   - Delhi zones and their daily tonnage; plant capacities and megawatt ratings; landfills; MRFs.
   - Road distances from OpenStreetMap. On AWS, uncached road distances are currently estimates.
 - **Simulated and labelled in the app:** daily operations, truck movement, meter readings, battery tester readings and upcycling partners. Say "simulated" if a judge asks.
-- **Not used:** SageMaker, IoT Core and Amazon Location Service. Don't claim them. Our answer if asked:
-  - "Training takes seconds on CPU, so SageMaker isn't needed yet; it is the next step at scale."
+- **Not used:** SageMaker, IoT Core and Amazon Location Service. Never say they're running. Our answers if asked:
+  - **SageMaker:** "We wanted it. Our account's SageMaker training-job quota is 0 and the account is region-restricted, so training runs in the AI container, which takes about 8 s per retrain at our scale. Next: Serverless Inference for the image models, Pipelines and Model Registry for retraining." See console-tour step 11.
   - "IoT Core is for real truck GPS and plant meters."
 - **Region:** our account is restricted to Sydney. We designed for Mumbai (ap-south-1) to be close to Delhi, and moving region is one variable.
 - **Second-life batteries store energy; they don't generate it.**
@@ -164,5 +176,7 @@ Go through the tabs quickly, about 8–10 seconds each. **B** speaks over all of
 | Why Fargate, not EC2 or Lambda? | Three long-running services, including a WebSocket feed and a 4 GB vision model. Fargate gives containers without managing servers; Lambda's cold starts and time limits don't fit the AI service. |
 | Why EventBridge? | It decouples the workflow from consumers. Alerts, analytics and future partner integrations subscribe with rules, and the archive gives replay for audits and retraining. |
 | How does it learn? | Every prediction is compared with the measured output. Errors are stored as feedback, drift is monitored, and retraining runs on schedule or when error crosses a threshold. Operator corrections count 3× in classification training. |
+| Why not SageMaker? | We designed for it, but our restricted account has a SageMaker training-job quota of 0. Training in the container takes about 8 seconds and versions go to S3. Next step: a Serverless Inference endpoint for the two image models (bursty load, $0 when idle), then Pipelines and Model Registry once we have GPU-scale real data. |
+| Isn't training in the API container risky? | It runs in the separate AI service, in a background thread. Each new version is evaluated against naive baselines with the metrics stored on the version, and earlier versions stay in S3. |
 | What does it cost? | About $150/month always on, mostly the NAT gateway, load balancer, database and three tasks. We destroy it when not demoing. |
 | Security? | Private subnets for the database and AI, secrets generated into Secrets Manager, a least-privilege IAM role, a private S3 bucket with pre-signed URLs, JWT + role-based access, and an audit log. |
