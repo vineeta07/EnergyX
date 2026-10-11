@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS users (
   email         TEXT NOT NULL UNIQUE,
   password_hash TEXT NOT NULL,
   name          TEXT NOT NULL,
-  role          TEXT NOT NULL CHECK (role IN ('generator','fleet','hub','facility','admin')),
+  role          TEXT NOT NULL CHECK (role IN ('generator','fleet','hub','facility','admin','citizen')),
   organization  TEXT,
   facility_id   INT,
   hub_id        INT,
@@ -522,3 +522,22 @@ CREATE TABLE IF NOT EXISTS battery_recycling (
   recovered  JSONB NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- ---- resident app: one row per thing a resident did (sorted an item, looked up a plastic code, read an idea)
+-- Databases created before the resident role existed still carry the old role list.
+ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
+ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('generator','fleet','hub','facility','admin','citizen'));
+
+CREATE TABLE IF NOT EXISTS citizen_actions (
+  id         SERIAL PRIMARY KEY,
+  user_id    INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  kind       TEXT NOT NULL CHECK (kind IN ('scan','resin','guide')),
+  item       TEXT NOT NULL,
+  material   TEXT,
+  verdict    TEXT,
+  points     INT NOT NULL DEFAULT 0,
+  method     TEXT,
+  confidence DOUBLE PRECISION,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_citizen_actions_user ON citizen_actions(user_id, created_at);

@@ -26,21 +26,22 @@ const MODELS = [
   ["Routing", "OR-Tools with a capacity limit, soft time windows, higher drop penalties for urgent pickups and guided local search. Falls back to nearest-neighbour with 2-opt."],
 ] as const;
 
+// What infra/terraform deploys today, and what is still planned. Keep the two in step.
 const AWS = [
-  ["CloudFront", "Next.js frontend + /api path routing"],
-  ["ALB → ECS Fargate", "Node.js API (Express) — auth, data, orchestration, WebSockets"],
-  ["ECS Fargate (private)", "Python AI service (FastAPI) — inference, OR-Tools, assistant"],
-  ["RDS PostgreSQL + PostGIS", "Operational DB (same schema as local embedded Postgres)"],
-  ["S3", "Waste images (presigned URLs), dataset snapshots, model artifacts"],
-  ["Amazon Bedrock", "Claude for the WattCycle Intelligence assistant (tool calls into live data)"],
-  ["SageMaker (planned)", "Training jobs once real data needs GPU-scale training; today the AI service trains in-process and versions to S3"],
-  ["EventBridge", "Domain-event bus for every step of the loop, archived; feedback events to CloudWatch"],
-  ["CodeBuild + ECR", "Builds the three container images in AWS from the GitHub repo"],
-  ["ElastiCache Redis (planned)", "Shared cache and token revocation when the API scales past one task"],
-  ["Amazon Location Service (planned)", "Route matrix + tiles (drop-in for the OSRM / OpenStreetMap road matrix used today)"],
-  ["IoT Core (planned)", "Vehicle GPS & facility meter telemetry (replaces the demo simulator)"],
-  ["CloudWatch", "Logs, metrics, model-drift alarms"],
-];
+  ["CloudFront", "Serves the web app and routes /api"],
+  ["ALB and ECS Fargate", "Node.js API: sign-in, data, the pipeline, WebSockets"],
+  ["ECS Fargate (private)", "Python service: prediction, routing, the assistant"],
+  ["RDS PostgreSQL with PostGIS", "Main database, same schema as the local one"],
+  ["S3", "Waste photos, dataset snapshots, model files"],
+  ["Amazon Bedrock", "Claude answers questions in the assistant, using lookups into live data"],
+  ["EventBridge", "Event bus for every step of the loop, with an archive"],
+  ["CodeBuild and ECR", "Builds the three container images from the GitHub repo"],
+  ["CloudWatch", "Logs, metrics and model-drift alarms"],
+  ["SageMaker (planned)", "Training jobs, once real data needs more than the Python service can train. Today the service trains the models itself and saves each version to S3"],
+  ["ElastiCache Redis (planned)", "Shared cache and revoked tokens, once the API runs as more than one task"],
+  ["Amazon Location Service (planned)", "Map tiles and the route matrix. Today these come from OpenStreetMap"],
+  ["IoT Core (planned)", "Truck GPS and plant meter feeds. Today a simulator provides them"],
+] as const;
 
 export default function About() {
   return (

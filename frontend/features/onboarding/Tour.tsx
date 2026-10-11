@@ -16,7 +16,12 @@ interface Step {
 
 const STEPS: Step[] = [
   { title: "Welcome to WattCycle", body: "This is a short tour of the screens you will use most. Pick the language you want to read it in. You can change it later from the top bar.", language: true },
-  { target: "nav", title: "Your menu", body: "Every screen you can open is listed here. The list follows your role, so a hub operator and a fleet operator see different things." },
+  { target: "nav", title: "Your menu", body: "Every screen you can open is listed here. The list follows your role, so a hub operator and a fleet operator see different things.", roles: ["generator", "fleet", "hub", "facility", "admin"] },
+  // Residents
+  { target: "plant", title: "Watch your plant grow", body: "Every item you sort earns points. Points grow this plant through seven levels, from a seed to a grove.", roles: ["citizen"] },
+  { target: "scan-cta", title: "Scan an item", body: "Take a photo of one item to see which bin it belongs in, and whether it can be recycled, composted or remade.", roles: ["citizen"] },
+  { target: "nav", title: "Your menu", body: "Plastic codes, upcycling ideas and the leaderboard are here. On a phone they are in the bar at the bottom of the screen.", roles: ["citizen"] },
+  { target: "resident-demo", title: "Watch the demo", body: "Plays the whole journey with a sample photo in about 30 seconds: the scan, the points, the plastic code, an idea and the leaderboard.", roles: ["citizen"] },
   { target: "kpis", title: "Today's figures", body: "Waste waiting, waste collected this week, loads at the hubs, energy made, CO₂ avoided and routes on the road. Click any of them to open the detail." },
   { target: "map", title: "The network map", body: "Sources, trucks, hubs and plants on one map. Trucks move as their GPS updates. Click a dot to see its name and load." },
   { target: "run", title: "Run one full load", body: "This runs a single load through every stage: pickup, weighing, sorting, choosing a plant, delivery and the meter reading. It takes about 25 seconds.", roles: ["admin", "hub", "fleet"] },
@@ -64,13 +69,14 @@ export function Tour() {
   const card = useRef<HTMLDivElement>(null);
   const next = useRef<HTMLButtonElement>(null);
 
-  // First visit for this account: wait until the shell (and the dashboard figures, if that is the page) are on screen, then start.
+  // First visit for this account: wait until the shell (and the dashboard figures or the resident plant, if that is the page) are on screen, then start.
   useEffect(() => {
     if (!user || active || seen(user.id)) return;
     const began = Date.now();
     const id = setInterval(() => {
       if (seen(user.id)) return clearInterval(id);
-      const ready = findTarget("nav") && (!location.pathname.startsWith("/dashboard") || findTarget("kpis"));
+      const path = location.pathname;
+      const ready = findTarget("nav") && (!path.startsWith("/dashboard") || findTarget("kpis")) && (!path.startsWith("/home") || findTarget("plant"));
       if (ready || Date.now() - began > 8000) { clearInterval(id); useTour.getState().start(); }
     }, 300);
     return () => clearInterval(id);

@@ -18,6 +18,8 @@ import { internalRouter } from "./api/internal.ts";
 import { plannerRouter } from "./api/planner.ts";
 import { circularRouter } from "./api/circular.ts";
 import { seedCircular } from "./services/circular.ts";
+import { citizenRouter } from "./api/citizen.ts";
+import { seedResidents } from "./services/citizen.ts";
 import { attachSocket, subscribe } from "./services/events.ts";
 import { initRoads, ensureRoadMatrix } from "./services/roads.ts";
 import { startFleetSimulator } from "./workers/fleet.ts";
@@ -32,6 +34,7 @@ async function main() {
   } catch (e: any) {
     console.warn("[db] circular seed deferred:", e.message); // needs the AI service for battery reference data
   }
+  if (await seedResidents()) console.log("[db] Seeded the resident demo account and simulated neighbours");
   // New fixed points get real road distances too.
   for (const t of ["WasteSourceRegistered", "FacilityRegistered"] as const) {
     subscribe(t, () => { ensureRoadMatrix().catch((e) => console.warn("[roads] refresh failed:", e.message)); });
@@ -52,7 +55,7 @@ async function main() {
   // Public endpoints (landing/impact pages)
   app.use("/api", (req, res, next) => (req.path.startsWith("/public/") ? platformRouter(req, res, next) : next()));
   // Everything else requires a valid JWT; per-route RBAC inside routers.
-  app.use("/api", requireAuth, networkRouter, opsRouter, aiRouter, platformRouter, plannerRouter, circularRouter);
+  app.use("/api", requireAuth, networkRouter, opsRouter, aiRouter, platformRouter, plannerRouter, circularRouter, citizenRouter);
   app.use("/internal", requireService, internalRouter);
   app.use((_req, res) => res.status(404).json({ error: "Not found" }));
   app.use(errorHandler);

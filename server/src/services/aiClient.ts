@@ -32,6 +32,8 @@ export const ai = {
   health: () => call<{ status: string; models: Record<string, any> }>("/health", undefined, 3000, "GET"),
   forecast: (body: unknown) => call<any>("/v1/forecast", body),
   classify: (body: unknown) => call<any>("/v1/classify", body),
+  // The first photo after a restart also loads the image model, which can take most of a minute on a laptop CPU.
+  classifyImage: (body: unknown) => call<any>("/v1/classify-image", body, 60_000),
   predictEnergy: (body: unknown) => call<any>("/v1/predict-energy", body),
   rankFacilities: (body: unknown) => call<any>("/v1/rank-facilities", body),
   optimizeRoutes: (body: unknown) => call<any>("/v1/optimize-routes", body, 30_000),

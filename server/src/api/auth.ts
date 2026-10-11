@@ -16,7 +16,7 @@ const RegisterSchema = z.object({
   email: z.email().max(200),
   password: z.string().min(8).max(128),
   name: z.string().min(2).max(100),
-  role: z.enum(["generator", "fleet", "hub", "facility"]), // admin accounts are provisioned, not self-registered
+  role: z.enum(["generator", "fleet", "hub", "facility", "citizen"]), // admin accounts are provisioned, not self-registered
   organization: z.string().max(200).optional(),
 });
 

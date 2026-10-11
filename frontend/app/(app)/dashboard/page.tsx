@@ -1,5 +1,7 @@
 "use client";
+import { useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Package, Truck, Warehouse, Zap, Leaf, Route as RouteIcon } from "lucide-react";
 import { api } from "@/lib/api";
@@ -16,6 +18,11 @@ export default function Dashboard() {
   const user = useAuth((s) => s.user)!;
   const { data, isLoading, error } = useQuery({ queryKey: ["dashboard"], queryFn: () => api.get<any>("/dashboard"), refetchInterval: 20_000 });
   const live = useLive((s) => s.events);
+  // Residents have their own home screen.
+  const router = useRouter();
+  const resident = user.role === "citizen";
+  useEffect(() => { if (resident) router.replace("/home"); }, [resident, router]);
+  if (resident) return null;
 
   if (isLoading) return <Loading label="Loading the network" />;
   if (error) return <ErrorBox error={error} />;

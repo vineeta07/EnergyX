@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 import crypto from "node:crypto";
 import { config } from "../config.ts";
 
-export type Role = "generator" | "fleet" | "hub" | "facility" | "admin";
+export type Role = "generator" | "fleet" | "hub" | "facility" | "admin" | "citizen";
 export interface AuthUser { id: number; email: string; name: string; role: Role; facility_id?: number | null; hub_id?: number | null }
 
 declare global {

@@ -6,6 +6,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   LayoutDashboard, Factory, Truck, Route, Warehouse, Scale, Zap, BarChart3, Cpu, Bell, Settings, ShieldCheck,
   LogOut, MessageSquareText, Play, Menu, X, Recycle, Map as MapIcon, CircleHelp, Shirt, BatteryCharging,
+  House, ScanLine, Lightbulb, Trophy, Sprout,
 } from "lucide-react";
 import { Logo } from "./Logo";
 import { LangSwitcher, ThemeToggle } from "./Prefs";
@@ -17,11 +18,20 @@ import { t } from "@/lib/i18n";
 import { useLiveSocket } from "@/hooks/useLiveSocket";
 import { AssistantDrawer } from "@/features/assistant/AssistantDrawer";
 import { DemoOverlay } from "@/features/demo/DemoOverlay";
+import { ResidentDemoButton, ResidentDemoPanel } from "@/features/resident/ResidentDemo";
 import { Tour, useTour } from "@/features/onboarding/Tour";
 import { PageFx } from "./PageFx";
 import { SeverityIcon } from "@/components/ui";
 
-type NavItem = { href: string; label: string; icon: any; roles?: Role[] };
+type NavItem = { href: string; label: string; icon: any; roles?: Role[]; also?: string[] };
+// Residents get their own short menu. Operators reach the same screens through "Resident app".
+const RESIDENT_NAV: NavItem[] = [
+  { href: "/home", label: "Home", icon: House },
+  { href: "/scan", label: "Scan an item", icon: ScanLine },
+  { href: "/resin", label: "Plastic codes", icon: Recycle },
+  { href: "/ideas", label: "Upcycling ideas", icon: Lightbulb },
+  { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
+];
 const NAV: NavItem[] = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/waste-sources", label: "Waste network", icon: Factory, roles: ["generator", "fleet", "admin"] },
@@ -37,6 +47,7 @@ const NAV: NavItem[] = [
   { href: "/analytics", label: "Analytics", icon: BarChart3, roles: ["admin", "fleet", "hub", "facility"] },
   { href: "/ai-model", label: "Models", icon: Cpu, roles: ["admin", "hub", "facility"] },
   { href: "/alerts", label: "Alerts", icon: Bell },
+  { href: "/home", label: "Resident app", icon: Sprout, also: ["/scan", "/resin", "/ideas", "/leaderboard"] },
   { href: "/settings", label: "Settings", icon: Settings },
   { href: "/admin", label: "Admin", icon: ShieldCheck, roles: ["admin"] },
 ];
@@ -55,18 +66,19 @@ export function AppShell({ children }: { children: ReactNode }) {
   useEffect(() => { setMobileNav(false); }, [path]);
 
   if (!hydrated || !token || !user) return <div className="grid min-h-screen place-items-center text-sm text-ink-3">{t("Loading WattCycle")}…</div>;
-  const nav = NAV.filter((n) => !n.roles || n.roles.includes(user.role));
+  const resident = user.role === "citizen";
+  const nav = resident ? RESIDENT_NAV : NAV.filter((n) => !n.roles || n.roles.includes(user.role));
 
   return (
     <div className="flex min-h-screen">
       <aside className={cx("fixed inset-y-0 left-0 z-40 flex w-60 flex-col border-r border-line bg-panel transition-transform lg:translate-x-0", mobileNav ? "translate-x-0" : "-translate-x-full")}>
         <div className="flex h-14 items-center justify-between border-b border-line px-4">
-          <Logo href="/dashboard" />
+          <Logo href={resident ? "/home" : "/dashboard"} />
           <button className="lg:hidden" onClick={() => setMobileNav(false)} aria-label={t("Close menu")}><X className="size-4" /></button>
         </div>
         <nav data-tour="nav" className="flex-1 space-y-0.5 overflow-y-auto p-2">
           {nav.map((n) => {
-            const active = path === n.href || (n.href !== "/dashboard" && path.startsWith(n.href));
+            const active = path === n.href || (n.href !== "/dashboard" && path.startsWith(n.href)) || !!n.also?.some((p) => path.startsWith(p));
             return (
               <Link key={n.href} href={n.href} aria-current={active ? "page" : undefined} className={cx("flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm transition-all hover:translate-x-0.5", active ? "bg-raised text-ink" : "text-ink-2 hover:bg-raised/60 hover:text-ink")}>
                 <n.icon className={cx("size-4", active ? "text-accent" : "text-ink-3")} />
@@ -76,19 +88,27 @@ export function AppShell({ children }: { children: ReactNode }) {
             );
           })}
         </nav>
-        <SystemStatus />
+        {!resident && <SystemStatus />}
+        {/* On phones the header has no room for the name and log-out button, so residents get them here. */}
+        {resident && (
+          <div className="flex items-center gap-2 border-t border-line p-3 md:hidden">
+            <div className="min-w-0 flex-1 leading-tight"><div data-notr className="truncate text-sm text-ink">{user.name}</div><div className="text-xs text-ink-3">{roleLabel(user.role)}</div></div>
+            <button title={t("Log out")} aria-label={t("Log out")} onClick={async () => { await api.post("/auth/logout").catch(() => {}); clear(); router.replace("/login"); }} className="grid size-8 place-items-center rounded-md text-ink-3 hover:bg-raised hover:text-ink"><LogOut className="size-4" /></button>
+          </div>
+        )}
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col lg:pl-60">
         <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-line bg-canvas px-4 lg:px-6">
           <button className="lg:hidden" onClick={() => setMobileNav(true)} aria-label={t("Open menu")}><Menu className="size-5" /></button>
-          <TopNav />
+          {!resident && <TopNav />}
           <div className="ml-auto flex items-center gap-2">
             <RunDemoButton role={user.role} />
-            <button data-tour="assistant" onClick={() => setAssistant(true)} className="flex h-8 items-center gap-1.5 rounded-md border border-line-2 px-2.5 text-xs font-medium text-ink-2 hover:border-ink-3 hover:text-ink">
+            {resident && <ResidentDemoButton />}
+            {!resident && <button data-tour="assistant" onClick={() => setAssistant(true)} className="flex h-8 items-center gap-1.5 rounded-md border border-line-2 px-2.5 text-xs font-medium text-ink-2 hover:border-ink-3 hover:text-ink">
               <MessageSquareText className="size-3.5" /> <span className="hidden sm:inline">{t("Ask WattCycle")}</span>
-            </button>
-            <Notifications />
+            </button>}
+            {!resident && <Notifications />}
             <LangSwitcher />
             <ThemeToggle />
             <button onClick={() => useTour.getState().start()} className="hidden size-8 place-items-center rounded-md text-ink-3 hover:bg-raised hover:text-ink sm:grid" aria-label={t("Take the tour")} title={t("Take the tour")}><CircleHelp className="size-4" /></button>
@@ -106,6 +126,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </div>
       <AssistantDrawer open={assistant} onClose={() => setAssistant(false)} />
       <DemoOverlay />
+      {resident && <ResidentDemoPanel />}
       <Tour />
       {mobileNav && <div className="fixed inset-0 z-30 bg-[rgba(24,19,12,0.5)] lg:hidden" onClick={() => setMobileNav(false)} />}
     </div>

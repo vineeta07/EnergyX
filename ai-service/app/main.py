@@ -10,6 +10,7 @@ import base64
 import binascii
 import hmac
 import time
+from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.concurrency import run_in_threadpool
@@ -26,7 +27,13 @@ from ml.models import registry
 from ml.optimization import city_plan, ranking, routing
 from ml.pipelines import train as training
 
-app = FastAPI(title="WattCycle AI Service", version="1.0.0")
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    vision.warm_up()  # returns at once; the image model loads in the background
+    yield
+
+
+app = FastAPI(title="WattCycle AI Service", version="1.0.0", lifespan=lifespan)
 
 
 def service_auth(x_service_key: str = Header(default="")):

@@ -22,7 +22,7 @@ export default function Batteries() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Battery Second Life" subtitle="Discarded batteries (laptop cells, EV modules, e-rickshaw batteries) are tested one by one, graded by the AI, and the healthy ones are combined into new packs that store electricity from rooftop solar or the grid and deliver it when needed. Unsafe or worn-out units go to an authorised recycler for material recovery." />
+      <PageHeader title="Battery second life" subtitle="Discarded batteries (laptop cells, EV modules, e-rickshaw batteries) are tested one by one, graded by the AI, and the healthy ones are combined into new packs that store electricity from rooftop solar or the grid and deliver it when needed. Unsafe or worn-out units go to an authorised recycler for material recovery." />
       <div className="flex gap-2 rounded-md border border-line bg-panel p-3 text-xs text-ink-2">
         <Info className="mt-0.5 size-3.5 shrink-0 text-cyan" />
         <span>Combined old batteries <b>store</b> electricity; they don't generate it. The energy comes from whatever charges them (here: hub rooftop solar or off-peak grid). The gain is a usable storage pack built from waste, which avoids manufacturing a new one, and recovers metals from the rest. Battery Waste Management Rules 2022 allow this through registered refurbishers under EPR.</span>

@@ -46,7 +46,7 @@ export default function Upcycling() {
         {lot ? <LotDetail lot={lot} canAct={canAct} onChange={() => qc.invalidateQueries()} /> : <p className="text-center text-xs text-ink-3">Select a lot to see the AI partner match and its lifecycle.</p>}
       </div>
 
-      <Panel title={<span className="flex items-center gap-2">Upcycling partners <SimTag label="DEMO PARTNERS" /></span>} subtitle="Prices are INR/kg paid for upcycle-grade material. Acceptance starts at an 85% prior and is learned from every receipt." bodyClass="p-0">
+      <Panel title={<span className="flex items-center gap-2">Upcycling partners <SimTag label="Demo partners" /></span>} subtitle="Prices are INR/kg paid for upcycle-grade material. Acceptance starts at an 85% prior and is learned from every receipt." bodyClass="p-0">
         {partners.isLoading ? <Loading /> : (
           <table className="w-full"><thead><tr><Th>Partner</Th><Th>Accepts (₹/kg)</Th><Th right>Capacity / week</Th><Th right>Received</Th><Th right>Accepted</Th><Th right>Observed acceptance</Th><Th>Makes</Th></tr></thead>
             <tbody>{(partners.data ?? []).filter((p) => p.kind === "upcycler").map((p) => (

@@ -3,7 +3,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { t } from "@/lib/i18n";
 
-export type Role = "generator" | "fleet" | "hub" | "facility" | "admin";
+export type Role = "generator" | "fleet" | "hub" | "facility" | "admin" | "citizen";
 export interface User { id: number; email: string; name: string; role: Role; organization?: string; facility_id?: number | null; hub_id?: number | null }
 
 interface AuthState {
@@ -32,5 +32,6 @@ const ROLE_LABEL: Record<Role, string> = {
   hub: "Hub operator",
   facility: "Plant operator",
   admin: "System operator",
+  citizen: "Resident",
 };
 export const roleLabel = (r: Role) => t(ROLE_LABEL[r]);

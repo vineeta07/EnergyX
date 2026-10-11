@@ -12,7 +12,7 @@ import { t } from "@/lib/i18n";
 export default function Register() {
   const router = useRouter();
   const setSession = useAuth((s) => s.setSession);
-  const [f, setF] = useState({ name: "", email: "", password: "", organization: "", role: "generator" });
+  const [f, setF] = useState({ name: "", email: "", password: "", organization: "", role: "citizen" });
   const [err, setErr] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
   const set = (k: string) => (e: any) => setF({ ...f, [k]: e.target.value });
@@ -23,7 +23,7 @@ export default function Register() {
     try {
       const r = await api.post<{ token: string; user: User }>("/auth/register", f);
       setSession(r.token, r.user);
-      router.replace(f.role === "generator" ? "/waste-sources/new" : "/dashboard");
+      router.replace(f.role === "citizen" ? "/home" : f.role === "generator" ? "/waste-sources/new" : "/dashboard");
     } catch (x) { setErr(x); } finally { setBusy(false); }
   }
 
@@ -31,20 +31,21 @@ export default function Register() {
     <div className="flex min-h-screen flex-col px-4 py-6">
       <div className="mx-auto flex w-full max-w-md items-center justify-between"><Logo /><div className="flex gap-2"><LangSwitcher /><ThemeToggle /></div></div>
       <div className="mx-auto my-auto w-full max-w-md py-10">
-        <h1 className="font-serif text-3xl font-medium text-ink">{t("Register your organisation")}</h1>
-        <p className="mt-2 text-sm leading-relaxed text-ink-2">{t("Generators add their waste sources. Fleets, hubs and plants join the same loop.")}</p>
+        <h1 className="font-serif text-3xl font-medium text-ink">{t("Create an account")}</h1>
+        <p className="mt-2 text-sm leading-relaxed text-ink-2">{t("Residents scan and sort what they throw away. Generators, fleets, hubs and plants run the rest of the loop.")}</p>
         <form className="mt-6 space-y-4 rounded-lg border border-line bg-panel p-6" onSubmit={submit}>
           <Field label={t("I am a")}>
             <Select value={f.role} onChange={set("role")}>
+              <option value="citizen">{t("Resident (my own household)")}</option>
               <option value="generator">{t("Waste generator (restaurant, hotel, market, farm, factory)")}</option>
               <option value="fleet">{t("Collection or fleet operator")}</option>
               <option value="hub">{t("Processing hub operator")}</option>
               <option value="facility">{t("Waste-to-energy plant")}</option>
             </Select>
           </Field>
-          <Field label={t("Organisation")}><Input value={f.organization} onChange={set("organization")} placeholder={t("MCD zone office, RWA, market, hotel")} /></Field>
+          <Field label={f.role === "citizen" ? t("Neighbourhood (optional)") : t("Organisation")}><Input value={f.organization} onChange={set("organization")} placeholder={f.role === "citizen" ? t("Lajpat Nagar, Delhi") : t("MCD zone office, RWA, market, hotel")} /></Field>
           <Field label={t("Your name")}><Input value={f.name} onChange={set("name")} required minLength={2} /></Field>
-          <Field label={t("Work email")}><Input type="email" value={f.email} onChange={set("email")} required /></Field>
+          <Field label={f.role === "citizen" ? t("Email") : t("Work email")}><Input type="email" value={f.email} onChange={set("email")} required /></Field>
           <Field label={t("Password")} hint={t("At least 8 characters. It is stored as a bcrypt hash.")}><Input type="password" value={f.password} onChange={set("password")} required minLength={8} /></Field>
           {err != null && <ErrorBox error={err} />}
           <Button variant="primary" className="w-full" loading={busy}>{t("Create account")}</Button>

@@ -117,6 +117,27 @@ def classify_images(images: list[bytes], top_k: int = 3) -> list[dict]:
     return out
 
 
+def warm_up() -> None:
+    """Load the model on a background thread at start-up.
+
+    Importing Keras/torch and reading the weights takes 20-60 s on a laptop CPU. Without this the
+    first photo after a restart waits for all of it (and the caller may time out)."""
+    if not available():
+        return
+
+    def run() -> None:
+        try:
+            from PIL import Image
+            buf = io.BytesIO()
+            Image.new("RGB", (INPUT_SIZE, INPUT_SIZE), (128, 128, 128)).save(buf, format="JPEG")
+            classify_images([buf.getvalue()])  # one grey frame also warms the first forward pass
+            print("[vision] model loaded")
+        except Exception as e:  # photos are optional; nothing else in the service depends on them
+            print(f"[vision] warm-up failed: {e}")
+
+    threading.Thread(target=run, name="vision-warm-up", daemon=True).start()
+
+
 def info() -> dict:
     return {"model": MODEL_ID, "architecture": "EfficientNetB0 + head (Keras 3, torch backend)", "classes": len(CLASSES),
             "streams": VISION_STREAMS, "loaded": _model is not None, "available": available()}

@@ -15,6 +15,14 @@ Beside the energy loop, three **circular-economy flows** apply the waste hierarc
 - **Upcycling:** textiles, glass jars, PET/HDPE containers and cardboard are set aside at the hub. The AI matches each lot to an upcycling partner (value, CO2e, learned acceptance), and partner receipts feed that acceptance back.
 - **Battery second life (e-waste):** discarded cells, modules and e-rickshaw batteries are tested and graded, then the AI combines the healthy ones into balanced storage packs with OR-Tools CP-SAT. Deployed packs report telemetry that corrects the fade-rate prior. Rejects go to an authorised recycler.
 
+There is also a **resident app** for households, on the same login (demo account `resident@wattcycle.demo`):
+- **Scan an item:** take a photo and see what it is, which bin it goes in (wet, dry, hazardous or donate), why, and whether it is recycled, composted, worth upcycling or burned for energy. The photo goes to the same 30-class image model the hub uses. If that model is not installed, the screen falls back to choosing the item from a list, so it always works.
+- **Plastic codes:** tap the number in the triangle (1 to 7) to see what the plastic is, whether it is recycled in practice, and whether it is safe to reuse.
+- **Upcycling ideas:** short how-to guides for bottles, jars, old clothes, cardboard, tins, newspaper and kitchen scraps.
+- **Points:** every item sorted earns points, with a daily cap. Points grow a plant through seven levels, and there are badges, a daily streak and a neighbourhood leaderboard. The demo neighbours on the leaderboard are simulated.
+
+The item list, plastic codes and scoring live in `server/src/services/citizen.ts`, the API in `server/src/api/citizen.ts`, and the screens in `frontend/app/(app)/{home,scan,resin,ideas,leaderboard}`.
+
 The platform does not send waste to the nearest facility. It sends it where it maximizes **useful energy**, net of transport cost, carbon, and capacity.
 
 ## Architecture
@@ -118,6 +126,7 @@ The first two run in CI (`.github/workflows/ci.yml`) along with typechecks and `
 ## Roles
 | Role | Can |
 |---|---|
+| Resident | Scan or pick an item to see its bin and whether it is recyclable, look up plastic codes, read upcycling ideas, earn points and badges, see the leaderboard |
 | Waste Generator | Register sources (live estimates), see forecasts, request pickups with a quote, track status, view impact |
 | Fleet Operator | Pickup board, run OR-Tools optimization, recalculate, dispatch, mark collected/delivered |
 | Hub Operator | Weighbridge, Analyze Waste, confirm/edit/reject classification (edits become training labels), energy pathways, approve/override destinations |

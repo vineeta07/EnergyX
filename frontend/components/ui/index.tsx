@@ -46,6 +46,7 @@ const TONES = {
   neutral: "border-line-2 text-ink-2 bg-raised",
   green: "border-accent/35 text-accent bg-accent/10",
   blue: "border-blue/35 text-blue bg-blue/10",
+  cyan: "border-blue/35 text-blue bg-blue/10",
   gold: "border-gold/35 text-gold bg-gold/10",
   warn: "border-warn/35 text-warn bg-warn/10",
   crit: "border-crit/40 text-crit bg-crit/10",

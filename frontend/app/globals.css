@@ -73,6 +73,7 @@
   --color-on-accent: var(--on-accent);
   --color-gold: var(--gold);
   --color-blue: var(--blue);
+  --color-cyan: var(--blue); /* the circular-economy screens say cyan; the palette has one blue */
   --color-warn: var(--warn);
   --color-crit: var(--crit);
   --font-sans: "Inter Variable", "Noto Sans Devanagari Variable", "Noto Sans Bengali Variable", "Noto Sans Tamil Variable", "Noto Sans Gurmukhi Variable", ui-sans-serif, system-ui, sans-serif;
@@ -129,3 +130,14 @@ html[lang="hi"] body, html[lang="bn"] body, html[lang="ta"] body, html[lang="pa"
 
 /* Buttons feel pressed. */
 button:not(:disabled):active, a[class*="rounded-full"]:active { transform: scale(0.98); }
+
+/* Resident app: the level ring fills smoothly, a reward rises in, the photo breathes while it is read. */
+.ring-progress { transition: stroke-dashoffset 0.9s ease-out; }
+@keyframes reward-pop { from { transform: translateY(14px) scale(0.96); opacity: 0; } to { transform: none; opacity: 1; } }
+.reward-pop { animation: reward-pop 0.35s ease-out; }
+@keyframes scan-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+.scan-pulse { animation: scan-pulse 1.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .ring-progress { transition: none; }
+  .reward-pop, .scan-pulse { animation: none; }
+}

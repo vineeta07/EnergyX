@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Factory, Truck, Warehouse, Zap, ShieldCheck } from "lucide-react";
+import { Factory, Truck, Warehouse, Zap, ShieldCheck, Sprout } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuth, type User } from "@/store/auth";
 import { Button, ErrorBox, Field, Input } from "@/components/ui";
@@ -12,6 +12,7 @@ import { t } from "@/lib/i18n";
 import { loadGsap, prefersReducedMotion } from "@/components/landing/gsapKit";
 
 const DEMO = [
+  { email: "resident@wattcycle.demo", role: "Resident", d: "Scan an item, see which bin it goes in, and earn points with your neighbours", icon: Sprout },
   { email: "admin@wattcycle.demo", role: "System operator", d: "The whole network, plant decisions, models and admin", icon: ShieldCheck },
   { email: "generator@wattcycle.demo", role: "Waste generator", d: "MCD Central and South zone office: forecasts and transfer-load requests", icon: Factory },
   { email: "fleet@wattcycle.demo", role: "Fleet operator", d: "Pickup board, truck routes, vehicles", icon: Truck },
@@ -48,7 +49,7 @@ export default function Login() {
       const r = await api.post<{ token: string; user: User }>("/auth/login", { email: e, password: p });
       setSession(r.token, r.user);
       const next = new URLSearchParams(location.search).get("next");
-      router.replace(next && next.startsWith("/") ? next : "/dashboard");
+      router.replace(next && next.startsWith("/") ? next : r.user.role === "citizen" ? "/home" : "/dashboard");
     } catch (x) { setErr(x); } finally { setBusy(null); }
   }
 
@@ -65,13 +66,13 @@ export default function Login() {
             {err != null && <ErrorBox error={err} />}
             <Button variant="primary" className="w-full" loading={busy === email}>{t("Login")}</Button>
           </form>
-          <p className="mt-4 text-sm text-ink-3">{t("No account yet?")} <Link href="/register" className="text-accent underline underline-offset-2">{t("Register your organisation")}</Link></p>
+          <p className="mt-4 text-sm text-ink-3">{t("No account yet?")} <Link href="/register" className="text-accent underline underline-offset-2">{t("Create an account")}</Link></p>
         </div>
       </div>
       <div className="border-l border-line bg-panel px-6 py-12 sm:px-12 lg:py-20">
         <div className="mx-auto max-w-md">
           <span className="inline-flex rounded-full bg-accent/15 px-3 py-1 text-xs text-accent">{t("Demo mode")}</span>
-          <h2 className="mt-3 font-serif text-2xl font-medium text-ink">{t("One network, five roles")}</h2>
+          <h2 className="mt-3 font-serif text-2xl font-medium text-ink">{t("One network, six roles")}</h2>
           <p className="mt-2 text-sm leading-relaxed text-ink-2">{t("Each role sees the screens and buttons its job needs. These accounts run in demo mode on simulated data.")}</p>
           <ul className="mt-6 divide-y divide-line border-y border-line">
             {DEMO.map((d) => (
@@ -80,7 +81,7 @@ export default function Login() {
                   className="group flex w-full items-center gap-3 rounded-xl px-3 py-3.5 text-left transition-all hover:bg-raised hover:pl-4 disabled:opacity-60">
                   <d.icon className="size-5 shrink-0 text-ink-3" />
                   <span className="min-w-0 flex-1"><span className="block text-sm font-medium text-ink">{t(d.role)}</span><span className="block text-xs leading-snug text-ink-3">{t(d.d)}</span></span>
-                  <span className="shrink-0 text-xs text-accent">{busy === d.email ? t("Logging in…") : t("Open dashboard")}</span>
+                  <span className="shrink-0 text-xs text-accent">{busy === d.email ? t("Logging in…") : d.email.startsWith("resident") ? t("Open the app") : t("Open dashboard")}</span>
                 </button>
               </li>
             ))}
