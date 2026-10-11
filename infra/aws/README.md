@@ -35,7 +35,7 @@ Credentials are never in code. Locally the SDKs read the AWS credential chain (`
 
 ## Deploy
 
-Install the [AWS CLI v2](https://aws.amazon.com/cli/) and [Terraform](https://developer.hashicorp.com/terraform/install). Sign in with `aws configure` or `aws sso login`. Make sure the code is pushed to GitHub, then run:
+Install the [AWS CLI v2](https://aws.amazon.com/cli/) and [Terraform](https://developer.hashicorp.com/terraform/install). Sign in with `aws configure` or `aws sso login`. Push your branch to GitHub first: CodeBuild builds the branch you are on (or `DEPLOY_BRANCH=main`), and the script stops if your local commit differs from GitHub. Then run:
 
 ```bash
 bash scripts/deploy-aws.sh

@@ -13,11 +13,17 @@ cd "$(dirname "$0")/.."
 TF="terraform -chdir=infra/terraform"
 REGION="${AWS_REGION:-ap-south-1}"
 TAG="$(git rev-parse --short HEAD)"
+# CodeBuild clones from GitHub, so build the branch you are on, and only once it is pushed.
+BRANCH="${DEPLOY_BRANCH:-$(git rev-parse --abbrev-ref HEAD)}"
+if [[ "${1:-}" != "--destroy" ]]; then
+  git fetch -q origin "$BRANCH" || { echo "Branch '$BRANCH' is not on GitHub. Push it first."; exit 1; }
+  [[ "$(git rev-parse HEAD)" == "$(git rev-parse "origin/$BRANCH")" ]] || { echo "Local '$BRANCH' differs from GitHub. Push or pull first, so the image matches tag $TAG."; exit 1; }
+fi
 
 command -v aws >/dev/null || { echo "AWS CLI not found"; exit 1; }
 command -v terraform >/dev/null || { echo "Terraform not found"; exit 1; }
 aws sts get-caller-identity --output text --query 'Arn' >/dev/null || { echo "No AWS credentials. Run 'aws configure' or 'aws sso login'."; exit 1; }
-echo "Deploying as $(aws sts get-caller-identity --query Arn --output text) to $REGION (image tag $TAG)"
+echo "Deploying as $(aws sts get-caller-identity --query Arn --output text) to $REGION (branch $BRANCH, image tag $TAG)"
 
 $TF init -upgrade -input=false
 
@@ -31,7 +37,7 @@ $TF apply -var "region=$REGION" -target=aws_ecr_repository.repo -target=aws_code
 
 echo "== 2/3 Building images in CodeBuild (tag $TAG; pushes must already be on GitHub)"
 BUILD_ID=$(aws codebuild start-build --region "$REGION" --project-name wattcycle-images \
-  --environment-variables-override "name=IMAGE_TAG,value=$TAG,type=PLAINTEXT" --query 'build.id' --output text)
+  --environment-variables-override "name=IMAGE_TAG,value=$TAG,type=PLAINTEXT" "name=REPO_BRANCH,value=$BRANCH,type=PLAINTEXT" --query 'build.id' --output text)
 echo "build $BUILD_ID"
 while true; do
   STATUS=$(aws codebuild batch-get-builds --region "$REGION" --ids "$BUILD_ID" --query 'builds[0].buildStatus' --output text)
