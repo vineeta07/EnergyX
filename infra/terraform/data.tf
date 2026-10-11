@@ -4,11 +4,6 @@ resource "random_password" "db" {
   special = false
 }
 
-resource "aws_db_subnet_group" "db" {
-  name       = local.name
-  subnet_ids = module.vpc.database_subnets
-}
-
 resource "aws_db_instance" "postgres" {
   identifier              = "${local.name}-pg"
   engine                  = "postgres"
@@ -18,7 +13,7 @@ resource "aws_db_instance" "postgres" {
   db_name                 = "wattcycle"
   username                = "wattcycle"
   password                = random_password.db.result
-  db_subnet_group_name    = aws_db_subnet_group.db.name
+  db_subnet_group_name    = module.vpc.database_subnet_group_name # created by the VPC module
   vpc_security_group_ids  = [aws_security_group.db.id]
   storage_encrypted       = true
   backup_retention_period = 1
