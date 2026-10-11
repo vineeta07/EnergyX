@@ -81,7 +81,7 @@ export default function Login() {
                   className="group flex w-full items-center gap-3 rounded-xl px-3 py-3.5 text-left transition-all hover:bg-raised hover:pl-4 disabled:opacity-60">
                   <d.icon className="size-5 shrink-0 text-ink-3" />
                   <span className="min-w-0 flex-1"><span className="block text-sm font-medium text-ink">{t(d.role)}</span><span className="block text-xs leading-snug text-ink-3">{t(d.d)}</span></span>
-                  <span className="shrink-0 text-xs text-accent">{busy === d.email ? t("Logging in…") : d.email.startsWith("resident") ? t("Open the app") : t("Open dashboard")}</span>
+                  <span className="shrink-0 text-xs text-accent">{busy === d.email ? t("Logging in…") : t("Open dashboard")}</span>
                 </button>
               </li>
             ))}
