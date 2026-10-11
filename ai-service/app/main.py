@@ -9,6 +9,7 @@ from __future__ import annotations
 import base64
 import binascii
 import hmac
+import threading
 import time
 from contextlib import asynccontextmanager
 
@@ -29,8 +30,12 @@ from ml.pipelines import train as training
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    vision.warm_up()  # returns at once; the image model loads in the background
-    detect.warm_up()  # the multi-item detector (best.pt) too
+    # Both models import torch. Two threads importing it at once can see a half-initialised module
+    # ("partially initialized module 'torch.utils'"), so load them one after the other on ONE thread.
+    def warm_models():
+        vision.warm_up(background=False)
+        detect.warm_up(background=False)
+    threading.Thread(target=warm_models, name="model-warm-up", daemon=True).start()
     yield
 
 

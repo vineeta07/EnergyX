@@ -52,14 +52,17 @@ def _load():
         return _model
 
 
-def warm_up():
+def warm_up(background: bool = True):
     """Load in the background at start-up so the first photo does not wait for it."""
     def run():
         try:
             _load()
         except DetectorUnavailable as e:
             print(f"[detect] not available: {e}")
-    threading.Thread(target=run, daemon=True).start()
+    if background:
+        threading.Thread(target=run, daemon=True).start()
+    else:
+        run()
 
 
 def info() -> dict:

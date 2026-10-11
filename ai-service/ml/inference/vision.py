@@ -117,7 +117,7 @@ def classify_images(images: list[bytes], top_k: int = 3) -> list[dict]:
     return out
 
 
-def warm_up() -> None:
+def warm_up(background: bool = True) -> None:
     """Load the model on a background thread at start-up.
 
     Importing Keras/torch and reading the weights takes 20-60 s on a laptop CPU. Without this the
@@ -135,7 +135,10 @@ def warm_up() -> None:
         except Exception as e:  # photos are optional; nothing else in the service depends on them
             print(f"[vision] warm-up failed: {e}")
 
-    threading.Thread(target=run, name="vision-warm-up", daemon=True).start()
+    if background:
+        threading.Thread(target=run, name="vision-warm-up", daemon=True).start()
+    else:
+        run()
 
 
 def info() -> dict:
