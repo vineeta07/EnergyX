@@ -63,40 +63,68 @@ If the tools do not contain the answer, say so plainly. Never invent figures. Zo
 Be concise: lead with the answer, then 2–5 short supporting bullets with the key numbers. Use kWh, kg / t, ₹ and km. Format with Markdown."""
 
 
+def provider() -> str:
+    """bedrock (Claude in Amazon Bedrock, AWS credential chain) | anthropic (Claude API key) | offline."""
+    p = os.getenv("ASSISTANT_PROVIDER", "").lower()
+    if p in ("bedrock", "anthropic", "offline"):
+        return p
+    return "anthropic" if os.getenv("ANTHROPIC_API_KEY") else "offline"
+
+
+def provider_info() -> dict:
+    p = provider()
+    return {"provider": p, "model": _model(p) if p != "offline" else None, "region": os.getenv("AWS_REGION") if p == "bedrock" else None}
+
+
+def _model(p: str) -> str:
+    # Bedrock model IDs carry the `anthropic.` provider prefix.
+    return ASSISTANT_MODEL if p == "anthropic" or ASSISTANT_MODEL.startswith("anthropic.") else f"anthropic.{ASSISTANT_MODEL}"
+
+
 def chat(messages: list[dict], user: dict) -> dict:
-    if os.getenv("ANTHROPIC_API_KEY"):
+    p = provider()
+    if p != "offline":
         try:
-            return _claude(messages, user)
+            return _claude(messages, user, p)
         except Exception as e:  # never leave the user without an answer
             fb = _rules(messages)
-            fb["notice"] = f"Claude unavailable ({type(e).__name__}); answered by the offline data router."
+            fb["notice"] = f"Claude via {p} unavailable ({type(e).__name__}); answered by the offline data router."
             return fb
     return _rules(messages)
 
 
-def _claude(messages: list[dict], user: dict) -> dict:
+def _create(client, p: str, **kw):
+    if p == "anthropic":
+        # Server-side refusal fallbacks are a Claude API feature (not available on Bedrock).
+        return client.beta.messages.create(**kw, betas=["server-side-fallback-2026-07-01"], fallbacks="default")
+    return client.messages.create(**kw)
+
+
+def _claude(messages: list[dict], user: dict, p: str = "anthropic") -> dict:
     import anthropic
 
-    client = anthropic.Anthropic()
+    if p == "bedrock":
+        client = anthropic.AnthropicBedrockMantle(aws_region=os.getenv("AWS_REGION", "ap-south-1"))
+    else:
+        client = anthropic.Anthropic()
     convo = [{"role": m["role"], "content": m["content"]} for m in messages]
     used = []
     system = SYSTEM + f"\nThe user is {user.get('name')} (role: {user.get('role')})."
     for _ in range(6):
-        resp = client.beta.messages.create(
-            model=ASSISTANT_MODEL,
+        resp = _create(
+            client, p,
+            model=_model(p),
             max_tokens=4000,
             system=system,
             tools=TOOLS,
             messages=convo,
             output_config={"effort": "low"},
-            betas=["server-side-fallback-2026-07-01"],
-            fallbacks="default",
         )
         if resp.stop_reason == "refusal":
-            return {"answer": "I can't help with that request.", "tools": used, "engine": "claude"}
+            return {"answer": "I can't help with that request.", "tools": used, "engine": f"claude via {p}"}
         if resp.stop_reason != "tool_use":
             text = "".join(b.text for b in resp.content if b.type == "text")
-            return {"answer": text, "tools": used, "engine": f"claude ({resp.model})"}
+            return {"answer": text, "tools": used, "engine": f"claude via {p} ({resp.model})"}
         convo.append({"role": "assistant", "content": resp.content})
         results = []
         for b in resp.content:
@@ -109,7 +137,7 @@ def _claude(messages: list[dict], user: dict) -> dict:
             except Exception as e:
                 results.append({"type": "tool_result", "tool_use_id": b.id, "content": f"error: {e}", "is_error": True})
         convo.append({"role": "user", "content": results})
-    return {"answer": "I could not complete that within the tool-call budget.", "tools": used, "engine": "claude"}
+    return {"answer": "I could not complete that within the tool-call budget.", "tools": used, "engine": f"claude via {p}"}
 
 
 # ------------------------------------------------------------------ offline deterministic router

@@ -17,9 +17,7 @@ import { HttpError, notFound } from "../middleware/http.ts";
 import type { AuthUser } from "../middleware/auth.ts";
 import { roadKm, roadLookup, transportCost, transportCo2, round, ROAD_FACTOR, AVG_SPEED_KMH, DIESEL_KG_CO2_PER_L, DIESEL_INR_PER_L } from "../utils/geo.ts";
 import { simulateEnergy, rng, STREAMS, POTENTIAL_KWH_PER_KG, type Stream, type Technology } from "../database/simulator.ts";
-import fs from "node:fs";
-import path from "node:path";
-import { config } from "../config.ts";
+import { getObject } from "./storage.ts";
 import { DEFAULT_WEIGHTS } from "../database/seed.ts";
 
 const STREAM_LABEL: Record<string, string> = { organic: "Organic", plastic: "Plastic", paper: "Paper", metal: "Metal", other: "Other / residual" };
@@ -204,13 +202,15 @@ export async function completeRoute(routeId: number, opts: { exact_weight?: bool
 
 // ---------------------------------------------------------------- 3. AI CHARACTERIZATION
 /** Read uploaded sample-audit photos (local disk; S3 GetObject in AWS mode) as base64 for the AI service. */
-function loadImages(keys: string[]) {
-  return keys.map((k) => {
+async function loadImages(keys: string[]) {
+  const out: string[] = [];
+  for (const k of keys) {
     if (!/^uploads\/\d{4}-\d{2}-\d{2}\/[0-9a-f-]{36}\.(jpg|png|webp)$/.test(k)) throw new HttpError(400, `Bad image key ${k}`);
-    const file = path.join(config.uploadDir, k.replace(/\//g, path.sep));
-    if (!fs.existsSync(file)) throw new HttpError(404, `Image not found: ${k}`);
-    return fs.readFileSync(file).toString("base64");
-  });
+    const body = await getObject(k); // local disk or S3
+    if (!body) throw new HttpError(404, `Image not found: ${k}`);
+    out.push(body.toString("base64"));
+  }
+  return out;
 }
 
 export async function classifyShipment(shipmentId: number, imageKeys: string[] = []) {
@@ -220,7 +220,7 @@ export async function classifyShipment(shipmentId: number, imageKeys: string[] =
   const kg = sh.measured_kg ?? sh.total_kg;
   const res = await ai.classify({
     total_kg: kg, month: new Date(sh.arrived_at ?? Date.now()).getMonth() + 1, moisture_pct: sh.moisture_pct,
-    source_mix: sh.source_mix, images: loadImages(imageKeys),
+    source_mix: sh.source_mix, images: await loadImages(imageKeys),
   });
   const cls = await insert<any>("waste_classifications", {
     shipment_id: sh.id, model_version: res.model_version, method: res.method, composition: res.composition,

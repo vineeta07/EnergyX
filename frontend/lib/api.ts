@@ -39,4 +39,7 @@ export const api = {
   upload: <T = any>(p: string, form: FormData) => request<T>("POST", p, form, true),
 };
 
-export const WS_URL = process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:4000/ws";
+/** WebSocket endpoint: explicit env, else same origin (CloudFront/ALB route /ws to the API), else the local API port in dev. */
+export const WS_URL = process.env.NEXT_PUBLIC_WS_URL ?? (typeof window === "undefined" || ["localhost:3000", "127.0.0.1:3000"].includes(window.location.host)
+  ? "ws://localhost:4000/ws"
+  : `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/ws`);

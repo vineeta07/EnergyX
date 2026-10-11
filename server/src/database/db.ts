@@ -19,7 +19,7 @@ let driver: Driver | null = null;
 async function createDriver(): Promise<Driver> {
   if (config.databaseUrl) {
     const pg = await import("pg");
-    const pool = new pg.default.Pool({ connectionString: config.databaseUrl, max: 10 });
+    const pool = new pg.default.Pool({ connectionString: config.databaseUrl, max: 10, ssl: config.databaseSsl ? { rejectUnauthorized: false } : undefined });
     return {
       query: (t, p) => pool.query(t, p as any[]),
       exec: (t) => pool.query(t),

@@ -97,7 +97,8 @@ async function execute(run: DemoRun, user: AuthUser) {
   const hub = await P.nearestHub(abc);
   let truck = await one<any>("SELECT * FROM vehicles WHERE code='T-104' AND status='idle'");
   truck ??= await one<any>("SELECT * FROM vehicles WHERE status='idle' AND capacity_kg >= $2 ORDER BY (hub_id=$1) DESC LIMIT 1", [hub.id, HERO_KG]);
-  if (!truck) throw new Error("No idle vehicle available");
+  truck ??= await one<any>("SELECT * FROM vehicles WHERE status='idle' ORDER BY capacity_kg DESC LIMIT 1");
+  if (!truck) throw new Error("No idle vehicle available — finish or dispatch the planned routes on the Routes page first");
   const opt = await P.optimizeCollection({ hub_id: hub.id, pickup_ids: pickups.map((p) => p.id), vehicle_ids: [truck.id] });
   const route = opt.routes[0];
   await stage(run, 2, `${route.vehicle_code}: ${route.stops.map((s: any) => s.name).join(" → ")} (${round(route.total_km, 1)} km, score ${route.opt_score}/100)`, { route });
@@ -137,16 +138,19 @@ async function execute(run: DemoRun, user: AuthUser) {
 
   // 9. DISPATCH — approve all decisions, drive the organic load to the chosen facility
   let dispatchRoute: any = null;
+  const dispatched: any[] = [];
   for (const d of dest.decisions) {
     const r = await P.approveDecision(d.id, user);
+    if (r.route) dispatched.push(r.route);
     if (d.id === orgDecision.id) dispatchRoute = r.route;
   }
-  if (dispatchRoute) {
-    setRouteSpeed(dispatchRoute.id, 900);
-    await P.startRoute(dispatchRoute.id);
+  // Drive every dispatch leg (one per stream), so no truck is left assigned after the demo.
+  for (const rt of dispatched) {
+    setRouteSpeed(rt.id, 900);
+    await P.startRoute(rt.id);
   }
   await stage(run, 8, dispatchRoute ? `${dispatchRoute.vehicle_code} dispatched: ${dispatchRoute.stops.map((s: any) => s.name).join(" → ")} (${round(dispatchRoute.total_km, 1)} km)` : "Dispatch planned", { route: dispatchRoute });
-  if (dispatchRoute) await waitFor(() => one<any>("SELECT id FROM routes WHERE id=$1 AND status='completed'", [dispatchRoute.id]), 7000);
+  if (dispatched.length) await waitFor(async () => (await one<any>("SELECT COUNT(*)::int AS n FROM routes WHERE id = ANY($1::int[]) AND status<>'completed'", [dispatched.map((r) => r.id)]))?.n === 0 || null, 9000);
   await sleep(1200);
 
   // 10. ENERGY — simulated facility meter for every energy prediction of this shipment

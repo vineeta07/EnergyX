@@ -12,6 +12,8 @@ import { ai } from "../services/aiClient.ts";
 import * as A from "../services/analytics.ts";
 import { config } from "../config.ts";
 import { runDemo, demoState } from "../workers/demo.ts";
+import { putObject, getObject, presignedGetUrl, storageMode, storageHealth } from "../services/storage.ts";
+import { eventBridgeEnabled, ebStats } from "../services/eventbridge.ts";
 
 export const platformRouter = Router();
 
@@ -94,7 +96,6 @@ platformRouter.get("/events", ah(async (req, res) => {
 }));
 
 // ------------------------------------------------------------------ uploads (images for classification / source registration)
-fs.mkdirSync(config.uploadDir, { recursive: true });
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 8 * 1024 * 1024, files: 1 },
@@ -108,20 +109,20 @@ platformRouter.post("/uploads", requireRole("generator", "hub", "admin"), upload
   const kind = MAGIC.find(([, sig]) => sig.every((b, i) => f.buffer[i] === b))?.[0];
   if (!kind) throw new HttpError(415, "Only JPEG, PNG or WebP images are accepted");
   const key = `uploads/${new Date().toISOString().slice(0, 10)}/${crypto.randomUUID()}.${kind}`;
-  // Local mode writes to disk; AWS mode PUTs to S3 (SSE-KMS) and serves via short-lived presigned GET URLs.
-  const dest = path.join(config.uploadDir, key.replace(/\//g, path.sep));
-  fs.mkdirSync(path.dirname(dest), { recursive: true });
-  fs.writeFileSync(dest, f.buffer);
-  await audit(req, "upload.create", "upload", key, { bytes: f.size });
+  // Local mode writes to disk; with S3_BUCKET set it PUTs to S3 and reads go through presigned URLs.
+  await putObject(key, f.buffer, f.mimetype || `image/${kind === "jpg" ? "jpeg" : kind}`);
+  await audit(req, "upload.create", "upload", key, { bytes: f.size, storage: storageMode() });
   res.status(201).json({ key, url: `/api/uploads/${encodeURIComponent(key)}`, bytes: f.size });
 }));
 
 platformRouter.get("/uploads/:key", ah(async (req, res) => {
   const key = decodeURIComponent(String(req.params.key));
   if (!/^uploads\/\d{4}-\d{2}-\d{2}\/[0-9a-f-]{36}\.(jpg|png|webp)$/.test(key)) throw new HttpError(400, "Bad key");
-  const file = path.join(config.uploadDir, key.replace(/\//g, path.sep));
-  if (!fs.existsSync(file)) throw notFound("Upload");
-  res.sendFile(file);
+  const signed = await presignedGetUrl(key);
+  if (signed) return res.redirect(302, signed);
+  const body = await getObject(key);
+  if (!body) throw notFound("Upload");
+  res.type(key.split(".").pop() ?? "jpg").send(body);
 }));
 
 // ------------------------------------------------------------------ assistant (runs in the Python AI service, tools hit /internal)
@@ -162,7 +163,16 @@ platformRouter.get("/admin/overview", requireRole("admin"), ah(async (_req, res)
     (SELECT COUNT(*)::int FROM events) AS events, (SELECT COUNT(*)::int FROM audit_logs) AS audit_logs`);
   let aiHealth: any;
   try { aiHealth = await ai.health(); } catch { aiHealth = { status: "unreachable" }; }
-  res.json({ counts, services: { api: "ok", database: config.databaseUrl ? "postgresql" : "pglite (embedded postgres)", ai: aiHealth.status, ai_models: aiHealth.models } });
+  res.json({
+    counts,
+    services: { api: "ok", database: config.databaseUrl ? "postgresql" : "pglite (embedded postgres)", ai: aiHealth.status, ai_models: aiHealth.models },
+    aws: {
+      region: config.awsRegion,
+      s3: await storageHealth(),
+      eventbridge: eventBridgeEnabled() ? { bus: config.eventBusName, ...ebStats } : { enabled: false },
+      bedrock: aiHealth.assistant ?? null,
+    },
+  });
 }));
 
 platformRouter.get("/system/status", requireAuth, ah(async (_req, res) => {

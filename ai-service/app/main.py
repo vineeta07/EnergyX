@@ -68,7 +68,7 @@ async def timing(request: Request, call_next):
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "models": {**registry.status(), "vision": {"loaded": vision.available(), "version": vision.MODEL_ID if vision.available() else None, "algorithm": vision.info()["architecture"]}}}
+    return {"status": "ok", "assistant": assistant.provider_info(), "artifacts": registry.remote_info(), "models": {**registry.status(), "vision": {"loaded": vision.available(), "version": vision.MODEL_ID if vision.available() else None, "algorithm": vision.info()["architecture"]}}}
 
 
 @app.post("/v1/forecast", dependencies=[Depends(service_auth)])
