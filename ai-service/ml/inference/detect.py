@@ -40,8 +40,8 @@ def _load():
             raise DetectorUnavailable(_error)
         try:
             from ultralytics import YOLO  # heavy import, only when the detector is first used
-        except ImportError:
-            _error = "the ultralytics package is not installed"
+        except ImportError as e:  # also covers OpenCV failing to load a system library
+            _error = f"ultralytics could not be imported: {e}"
             raise DetectorUnavailable(_error)
         try:
             _model = YOLO(str(MODEL_PATH))

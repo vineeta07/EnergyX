@@ -3,7 +3,7 @@ FROM python:3.12-slim
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 libgl1 libglib2.0-0 curl && rm -rf /var/lib/apt/lists/*
 COPY ai-service/requirements.txt .
-RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu  && pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu  && pip install --no-cache-dir -r requirements.txt \n && pip uninstall -y opencv-python && pip install --no-cache-dir opencv-python-headless  # servers need no GUI OpenCV
 COPY ai-service/ ./
 # Pretrained waste image classifier (weights are not committed to git)
 RUN M=ml/models/pretrained/waste-classification-v2 && mkdir -p $M  && for f in config.json metadata.json model.weights.h5; do       curl -sfL -o $M/$f https://huggingface.co/Darshan764/waste-classification-v2/resolve/main/$f; done
